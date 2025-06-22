@@ -22,10 +22,19 @@ export const AuthCallback: React.FC = () => {
 
         const error = searchParams.get('error') || hashParams.get('error')
         const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
-        const code = searchParams.get('code')
         const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        const expiresIn = hashParams.get('expires_in')
+        const tokenType = hashParams.get('token_type')
 
-        console.log('🔍 URL params:', { error, errorDescription, code, accessToken })
+        console.log('🔍 URL params:', {
+          error,
+          errorDescription,
+          hasAccessToken: !!accessToken,
+          hasRefreshToken: !!refreshToken,
+          expiresIn,
+          tokenType
+        })
 
         if (error) {
           setError(errorDescription || error)
@@ -33,52 +42,83 @@ export const AuthCallback: React.FC = () => {
           return
         }
 
-        // Handle PKCE flow with code
-        if (code) {
-          console.log('🔄 Processing PKCE flow with code...')
-          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+        // Handle implicit flow with access token in hash
+        if (accessToken) {
+          console.log('🔄 Processing implicit flow with access token...')
 
-          if (exchangeError) {
-            console.error('❌ Code exchange error:', exchangeError)
-            setError(exchangeError.message)
-            setStatus('error')
-            return
+          try {
+            // Set the session manually using the tokens from the URL
+            const { data, error: setSessionError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken || ''
+            })
+
+            if (setSessionError) {
+              console.error('❌ Set session error:', setSessionError)
+              // Don't return here, fall through to session check
+            } else if (data.session) {
+              console.log('✅ Implicit flow authentication successful!')
+              setStatus('success')
+              setTimeout(() => {
+                history.replace('/')
+              }, 1500)
+              return
+            }
+          } catch (setSessionError) {
+            console.error('❌ Manual session setup error:', setSessionError)
+            // Continue to session check
           }
+        }
 
-          if (data.session) {
-            console.log('✅ PKCE authentication successful!')
+        // Handle any URL that might contain session info
+        // This covers cases where Supabase automatically processes the callback
+        if (window.location.hash || window.location.search) {
+          console.log('🔄 Waiting for Supabase to process URL...')
+          // Give Supabase more time to automatically process the callback
+          await new Promise(resolve => setTimeout(resolve, 3000))
+        }
+
+        // Fallback: Check for existing session with retries
+        console.log('🔄 Checking for existing session...')
+
+        let session = null
+        let sessionError = null
+
+        // Try multiple times to get the session
+        for (let attempt = 1; attempt <= 5; attempt++) {
+          console.log(`🔄 Session check attempt ${attempt}/5`)
+
+          const result = await supabase.auth.getSession()
+          sessionError = result.error
+          session = result.data.session
+
+          if (session) {
+            console.log('✅ Session found!')
             setStatus('success')
             setTimeout(() => {
               history.replace('/')
             }, 1500)
             return
           }
+
+          if (sessionError) {
+            console.error(`❌ Session error on attempt ${attempt}:`, sessionError)
+          }
+
+          // Wait before next attempt
+          if (attempt < 5) {
+            await new Promise(resolve => setTimeout(resolve, 1000))
+          }
         }
 
-        // Handle implicit flow or check existing session
-        console.log('🔄 Checking for existing session...')
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Give Supabase time to process
-
-        const { data, error: sessionError } = await supabase.auth.getSession()
-
+        // If we get here, no session was found after all attempts
+        console.warn('⚠️ No session found after all attempts')
         if (sessionError) {
-          console.error('❌ Session error:', sessionError)
           setError(sessionError.message)
-          setStatus('error')
-          return
-        }
-
-        if (data.session) {
-          console.log('✅ Session found!')
-          setStatus('success')
-          setTimeout(() => {
-            history.replace('/')
-          }, 1500)
         } else {
-          console.warn('⚠️ No session found')
           setError('Authentication failed - no session established')
-          setStatus('error')
         }
+        setStatus('error')
       } catch (error) {
         console.error('❌ Auth callback error:', error)
         setError('An unexpected error occurred during authentication')
