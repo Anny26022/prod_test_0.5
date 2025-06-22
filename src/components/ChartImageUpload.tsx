@@ -15,6 +15,7 @@ interface ChartImageUploadProps {
   disabled?: boolean;
   compact?: boolean;
   suggestedUploadMethod?: 'file' | 'url';
+  allowTemporary?: boolean; // NEW: Allow temporary uploads for new trades
 }
 
 export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
@@ -26,6 +27,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
   disabled = false,
   compact = false,
   suggestedUploadMethod,
+  allowTemporary = true, // NEW: Default to allowing temporary uploads
 }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -246,13 +248,27 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       setUploadProgress(90);
 
       // Upload the downloaded file
-      const result = await ChartImageService.attachChartImage(tradeId, imageType, file, true);
+      console.log(`🔍 [URL_UPLOAD] Chart upload parameters:`, {
+        tradeId,
+        imageType,
+        fileName: file.name,
+        allowTemporary,
+        shouldCompress: true
+      });
+
+      const result = await ChartImageService.attachChartImage(tradeId, imageType, file, true, allowTemporary);
 
       setUploadProgress(100);
 
       if (result.success && result.chartImage) {
         // Ensure the chart image has a dataUrl for immediate preview
         const chartImageWithPreview = await ensureChartImageDataUrl(result.chartImage);
+
+        // Mark as temporary if needed
+        if (result.isTemporary) {
+          chartImageWithPreview.isTemporary = true;
+        }
+
         onImageUploaded(chartImageWithPreview, 'url');
         setTradingViewUrl(''); // Clear the URL input
 
@@ -298,7 +314,15 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       }, 100);
 
       // Upload image
-      const result = await ChartImageService.attachChartImage(tradeId, imageType, file, true);
+      console.log(`🔍 [UPLOAD] Chart upload parameters:`, {
+        tradeId,
+        imageType,
+        fileName: file.name,
+        allowTemporary,
+        shouldCompress: true
+      });
+
+      const result = await ChartImageService.attachChartImage(tradeId, imageType, file, true, allowTemporary);
 
       clearInterval(progressInterval);
       setUploadProgress(100);
@@ -306,7 +330,14 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       if (result.success && result.chartImage) {
         // Ensure the chart image has a dataUrl for immediate preview
         const chartImageWithPreview = await ensureChartImageDataUrl(result.chartImage);
+
+        // Mark as temporary if needed
+        if (result.isTemporary) {
+          chartImageWithPreview.isTemporary = true;
+        }
+
         onImageUploaded(chartImageWithPreview, 'file');
+        console.log(`✅ ${title} uploaded successfully${result.isTemporary ? ' (temporary)' : ''}`);
 
       } else {
         setError(result.error || 'Upload failed');
@@ -605,6 +636,8 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
             <p className="text-sm text-danger-600 dark:text-danger-400">{error}</p>
           </motion.div>
         )}
+
+
         
         <input
           ref={fileInputRef}

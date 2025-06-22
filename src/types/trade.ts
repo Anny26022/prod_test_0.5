@@ -110,6 +110,9 @@ export interface ChartImage {
   };
   compressed?: boolean; // Whether image was compressed
   originalSize?: number; // Original size before compression
+  // NEW: Temporary storage flag for charts uploaded before trade exists
+  isTemporary?: boolean; // Whether this chart is stored temporarily
+  dataUrl?: string; // Cached data URL for display
 }
 
 export interface CapitalChange {

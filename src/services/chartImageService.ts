@@ -92,18 +92,17 @@ export class ChartImageService {
 
   /**
    * Attach a chart image to a trade
+   * NEW: Supports temporary storage for trades that don't exist yet
    */
   static async attachChartImage(
     tradeId: string,
     imageType: 'beforeEntry' | 'afterExit',
     file: File,
-    shouldCompress: boolean = true
-  ): Promise<{ success: boolean; chartImage?: ChartImage; error?: string }> {
+    shouldCompress: boolean = true,
+    allowTemporary: boolean = true
+  ): Promise<{ success: boolean; chartImage?: ChartImage; error?: string; isTemporary?: boolean }> {
     try {
       console.log(`📸 [${imageType.toUpperCase()}] Attaching chart image to trade ${tradeId}: ${file.name} (${file.size} bytes)`);
-
-      // Test blob functionality first (remove this in production)
-      // await ChartImageService.testBlobFunctionality(file);
 
       // Create chart image record (this handles compression)
       const { chartImage, processedFile } = await createChartImage(file, shouldCompress);
@@ -124,7 +123,24 @@ export class ChartImageService {
         reader.readAsDataURL(processedFile);
       });
 
-      // PURE SUPABASE: Always save to Supabase, no local storage
+      // NEW: Check if this is a temporary upload (trade doesn't exist yet)
+      const isTemporaryUpload = tradeId === 'new' || tradeId.startsWith('temp_');
+
+      console.log(`🔍 [${imageType.toUpperCase()}] Upload parameters:`, {
+        tradeId,
+        allowTemporary,
+        isTemporaryUpload,
+        shouldCreateTemporary: isTemporaryUpload && allowTemporary
+      });
+
+      if (isTemporaryUpload && allowTemporary) {
+        console.log(`📦 [${imageType.toUpperCase()}] Creating temporary chart image for new trade`);
+        // For temporary uploads, just return the chart image without saving to Supabase
+        // It will be saved later when the trade is actually created
+        return { success: true, chartImage, isTemporary: true };
+      }
+
+      // PURE SUPABASE: Always save to Supabase for existing trades
 
       // Check if user is authenticated for Supabase storage
       const isAuthenticated = await AuthService.isAuthenticated();
@@ -136,8 +152,45 @@ export class ChartImageService {
       // This is required due to foreign key constraint
       const trade = await SupabaseService.getTrade(tradeId);
       if (!trade) {
+        if (allowTemporary) {
+          console.log(`📦 [${imageType.toUpperCase()}] Trade not found in cloud storage, creating temporary chart image`);
+          return { success: true, chartImage, isTemporary: true };
+        }
         return { success: false, error: 'Trade not found in cloud storage' };
       }
+
+      // NEW: Additional check - verify trade actually exists in Supabase trades table
+      // We need to check with the converted UUID to ensure foreign key constraint will work
+
+      // First, convert the trade ID to UUID format (same logic as SupabaseService)
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tradeId);
+      let convertedTradeId: string;
+
+      if (isUUID) {
+        convertedTradeId = tradeId;
+      } else {
+        // Use the EXACT same conversion logic as SupabaseService
+        const hash = tradeId.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        const hex = Math.abs(hash).toString(16).padStart(8, '0');
+        convertedTradeId = `${hex.slice(0, 8)}-${hex.slice(0, 4)}-4${hex.slice(1, 4)}-8${hex.slice(0, 3)}-${hex.slice(0, 12).padEnd(12, '0')}`;
+      }
+
+      console.log(`🔍 [${imageType.toUpperCase()}] Converted trade ID: ${tradeId} → ${convertedTradeId}`);
+
+      // Now verify the trade exists in Supabase with this exact UUID
+      console.log(`🔍 [${imageType.toUpperCase()}] Verifying trade exists in Supabase with UUID: ${convertedTradeId}`);
+      const supabaseTrade = await SupabaseService.getTradeFromSupabaseOnly(convertedTradeId);
+      if (!supabaseTrade) {
+        if (allowTemporary) {
+          console.log(`📦 [${imageType.toUpperCase()}] Trade not found in Supabase trades table, creating temporary chart image`);
+          return { success: true, chartImage, isTemporary: true };
+        }
+        return { success: false, error: 'Trade not found in Supabase trades table' };
+      }
+      console.log(`✅ [${imageType.toUpperCase()}] Trade verified in Supabase:`, supabaseTrade.name || supabaseTrade.id);
 
       // Save the trade to Supabase to satisfy foreign key constraint
       try {
@@ -150,38 +203,7 @@ export class ChartImageService {
       }
 
       // We already have base64Data from above, no need to convert again
-
-      // CRITICAL: Use the SAME UUID conversion logic as SupabaseService
-      // We need to ensure we're using the exact same UUID that was used when saving the trade
-
-      // Check if this is already a UUID
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tradeId);
-
-      let convertedTradeId: string;
-      if (isUUID) {
-        convertedTradeId = tradeId;
-      } else {
-        // Use the EXACT same conversion logic as SupabaseService.convertToUUID
-        // This is critical for foreign key consistency
-        const hash = tradeId.split('').reduce((a, b) => {
-          a = ((a << 5) - a) + b.charCodeAt(0);
-          return a & a;
-        }, 0);
-
-        const hex = Math.abs(hash).toString(16).padStart(8, '0');
-        convertedTradeId = `${hex.slice(0, 8)}-${hex.slice(0, 4)}-4${hex.slice(1, 4)}-8${hex.slice(0, 3)}-${hex.slice(0, 12).padEnd(12, '0')}`;
-      }
-
-      console.log(`🔍 [${imageType.toUpperCase()}] Converted trade ID: ${convertedTradeId}`);
-
-      // Verify the trade exists in Supabase with this exact UUID
-      console.log(`🔍 [${imageType.toUpperCase()}] Verifying trade exists in Supabase with UUID: ${convertedTradeId}`);
-      const verifyTrade = await SupabaseService.getTrade(tradeId); // This should use the same conversion logic
-      if (!verifyTrade) {
-        console.error(`❌ [${imageType.toUpperCase()}] Trade verification failed - trade not found in Supabase with converted UUID`);
-        return { success: false, error: 'Trade not found in cloud storage after conversion' };
-      }
-      console.log(`✅ [${imageType.toUpperCase()}] Trade verified in Supabase: ${verifyTrade.name}`);
+      // convertedTradeId is already calculated above
 
       const supabaseImageBlob = {
         id: chartImage.blobId, // This is already a UUID from uuidv4()
@@ -254,10 +276,127 @@ export class ChartImageService {
         }
       }, 5000);
 
-      return { success: true, chartImage };
-      
+      return { success: true, chartImage, isTemporary: false };
+
     } catch (error) {
       console.error('❌ Failed to attach chart image:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Save temporary chart images to Supabase when trade is created
+   * NEW: Helper method to persist temporary charts
+   */
+  static async saveTemporaryChartImages(
+    tradeId: string,
+    chartAttachments: any
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!chartAttachments) {
+        return { success: true };
+      }
+
+      console.log(`💾 [TEMP_SAVE] Saving temporary chart images for trade ${tradeId}`);
+
+      const isAuthenticated = await AuthService.isAuthenticated();
+      if (!isAuthenticated) {
+        return { success: false, error: 'User must be authenticated to save chart images' };
+      }
+
+      // Process beforeEntry image
+      if (chartAttachments.beforeEntry) {
+        const result = await this.saveTemporaryChartImage(tradeId, 'beforeEntry', chartAttachments.beforeEntry);
+        if (!result.success) {
+          return result;
+        }
+      }
+
+      // Process afterExit image
+      if (chartAttachments.afterExit) {
+        const result = await this.saveTemporaryChartImage(tradeId, 'afterExit', chartAttachments.afterExit);
+        if (!result.success) {
+          return result;
+        }
+      }
+
+      console.log(`✅ [TEMP_SAVE] All temporary chart images saved successfully for trade ${tradeId}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error('❌ Failed to save temporary chart images:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  }
+
+  /**
+   * Save a single temporary chart image to Supabase
+   * PRIVATE: Helper method for saveTemporaryChartImages
+   */
+  private static async saveTemporaryChartImage(
+    tradeId: string,
+    imageType: 'beforeEntry' | 'afterExit',
+    chartImage: any
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Skip if already saved to Supabase (not temporary)
+      if (chartImage.storage === 'blob' && chartImage.blobId && !chartImage.isTemporary) {
+        console.log(`⏭️ [TEMP_SAVE] Chart image already saved to Supabase: ${chartImage.filename}`);
+        return { success: true };
+      }
+
+      console.log(`💾 [TEMP_SAVE] Saving ${imageType} chart image: ${chartImage.filename}`);
+
+      // Convert inline data to base64 if needed
+      let base64Data: string;
+      if (chartImage.data) {
+        // Remove data URL prefix if present
+        base64Data = chartImage.data.replace(/^data:image\/[a-z]+;base64,/, '');
+      } else {
+        console.error(`❌ [TEMP_SAVE] No data found for chart image: ${chartImage.filename}`);
+        return { success: false, error: 'No image data found' };
+      }
+
+      // Convert trade ID to UUID format for Supabase
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tradeId);
+      let convertedTradeId: string;
+
+      if (isUUID) {
+        convertedTradeId = tradeId;
+      } else {
+        const hash = tradeId.split('').reduce((a, b) => {
+          a = ((a << 5) - a) + b.charCodeAt(0);
+          return a & a;
+        }, 0);
+        const hex = Math.abs(hash).toString(16).padStart(8, '0');
+        convertedTradeId = `${hex.slice(0, 8)}-${hex.slice(0, 4)}-4${hex.slice(1, 4)}-8${hex.slice(0, 3)}-${hex.slice(0, 12).padEnd(12, '0')}`;
+      }
+
+      // Create Supabase blob record
+      const supabaseImageBlob = {
+        id: chartImage.blobId || chartImage.id,
+        trade_id: convertedTradeId,
+        image_type: imageType,
+        filename: chartImage.filename,
+        mime_type: chartImage.mimeType,
+        size_bytes: chartImage.size,
+        data: base64Data,
+        uploaded_at: chartImage.uploadedAt.toISOString(),
+        compressed: chartImage.compressed || false,
+        original_size: chartImage.originalSize
+      };
+
+      // Save to Supabase
+      const supabaseSaved = await SupabaseService.saveChartImageBlob(supabaseImageBlob);
+      if (!supabaseSaved) {
+        return { success: false, error: 'Failed to save image to cloud storage' };
+      }
+
+      console.log(`✅ [TEMP_SAVE] Chart image saved to Supabase: ${chartImage.filename}`);
+      return { success: true };
+
+    } catch (error) {
+      console.error(`❌ [TEMP_SAVE] Failed to save temporary chart image:`, error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
   }

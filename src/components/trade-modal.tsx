@@ -394,6 +394,18 @@ import * as Papa from "papaparse"; // Centralized import
         const { SupabaseService } = await import('../services/supabaseService');
         const { ChartImageService } = await import('../services/chartImageService');
 
+        // NEW: Check if trade ID is a UUID format
+        const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trade.id);
+
+        if (!isUUID) {
+          console.log(`📦 [CHART_LOAD] Trade ID is not UUID format, skipping Supabase chart loading: ${trade.id}`);
+          // For non-UUID trades (new trades), just use the trade's existing chart attachments
+          if (trade.chartAttachments) {
+            setChartAttachments(trade.chartAttachments);
+          }
+          return;
+        }
+
         // Always reload from Supabase to get the latest state
         // This is especially important in upload-only mode to reflect any deletions
         const [supabaseBlobs, currentTrade] = await Promise.all([
@@ -648,7 +660,7 @@ import * as Papa from "papaparse"; // Centralized import
     // Trigger chart refresh for Universal Chart Viewer
     setChartRefreshTrigger(prev => prev + 1);
     onChartRefresh?.(); // Also trigger parent refresh
-    console.log('🔄 Chart uploaded, triggering Universal Chart Viewer refresh');
+    console.log(`🔄 Chart uploaded${(chartImage as any).isTemporary ? ' (temporary)' : ''}, triggering Universal Chart Viewer refresh`);
 
     // Track upload method for consistency
     if (uploadMethod) {
@@ -656,26 +668,32 @@ import * as Papa from "papaparse"; // Centralized import
         ...prev,
         [imageType]: uploadMethod
       }));
-
     }
 
-    // CRITICAL FIX: Immediately update the trade in the database if it's an existing trade
-    // BUT don't auto-save in upload-only mode to prevent modal from closing
-    if (mode === 'edit' && trade?.id && !isUploadOnlyMode) {
-      try {
-        const updatedTrade = {
-          ...trade,
-          chartAttachments: newChartAttachments
-        };
+    // NEW: Handle temporary vs permanent chart uploads
+    const isTemporary = (chartImage as any).isTemporary;
 
-        // Save the updated trade to database immediately
-        onSave(updatedTrade);
+    if (isTemporary) {
+      // For temporary uploads, just store in local state
+      // They will be saved to Supabase when the trade is actually saved
+      console.log(`📦 Chart image stored temporarily: ${chartImage.filename}`);
+    } else {
+      // CRITICAL FIX: Immediately update the trade in the database if it's an existing trade
+      // BUT don't auto-save in upload-only mode to prevent modal from closing
+      if (mode === 'edit' && trade?.id && !isUploadOnlyMode) {
+        try {
+          const updatedTrade = {
+            ...trade,
+            chartAttachments: newChartAttachments
+          };
 
-      } catch (error) {
-        console.error('❌ Failed to update trade with chart attachment:', error);
+          // Save the updated trade to database immediately
+          onSave(updatedTrade);
+
+        } catch (error) {
+          console.error('❌ Failed to update trade with chart attachment:', error);
+        }
       }
-    } else if (isUploadOnlyMode) {
-
     }
   }, [chartAttachments, mode, trade, onSave, isUploadOnlyMode]);
 
@@ -709,27 +727,24 @@ import * as Papa from "papaparse"; // Centralized import
     onChartRefresh?.(); // Also trigger parent refresh
     console.log('🔄 Chart deleted, triggering Universal Chart Viewer refresh');
 
-    // CRITICAL FIX: Always update the trade in the database immediately when deleting charts
+    // CRITICAL FIX: Update the trade in the database immediately when deleting charts
     // This ensures the chart attachment reference is removed from the trade record
-    // Even in upload-only mode, we need to persist deletions to prevent them from reappearing
-    if (trade?.id) {
+    // BUT don't auto-save in upload-only mode to prevent modal from closing
+    if (trade?.id && !isUploadOnlyMode) {
       try {
         const updatedTrade = {
           ...trade,
           chartAttachments: updatedChartAttachments // This will be undefined if no attachments remain
         };
 
-
-
         // Save the updated trade to database immediately
-        // Note: In upload-only mode, this won't close the modal because we're not changing the modal state
         onSave(updatedTrade);
 
       } catch (error) {
         console.error('❌ Failed to update trade after chart deletion:', error);
       }
-    } else {
-
+    } else if (isUploadOnlyMode) {
+      console.log('📦 Chart deleted in upload-only mode, not auto-saving to prevent modal close');
     }
 
     // Also ensure the form data is updated to reflect the deletion
@@ -854,7 +869,7 @@ import * as Papa from "papaparse"; // Centralized import
   }, [formData]);
 
   // Enhanced handleSubmit with better error handling and data persistence
-  const handleSubmit = React.useCallback(() => {
+  const handleSubmit = React.useCallback(async () => {
     console.log('🔄 Starting trade save process...');
     console.log('📊 Current formData:', formData);
 
@@ -925,7 +940,37 @@ import * as Papa from "papaparse"; // Centralized import
       const recalculated = recalculateTrade(newTrade, portfolioSize, getPortfolioSize);
       console.log('🧮 Recalculated trade:', recalculated);
 
+      // NEW: Save temporary chart images to Supabase after trade is saved
+      const hasTemporaryCharts = hasValidAttachments && (
+        (cleanedChartAttachments.beforeEntry as any)?.isTemporary ||
+        (cleanedChartAttachments.afterExit as any)?.isTemporary
+      );
+
+      if (hasTemporaryCharts) {
+        console.log('📦 Trade has temporary chart images, will save them after trade creation');
+      }
+
       onSave(recalculated);
+
+      // NEW: Save temporary charts after trade is saved
+      if (hasTemporaryCharts && recalculated.id) {
+        try {
+          console.log('💾 Saving temporary chart images to Supabase...');
+          const { ChartImageService } = await import('../services/chartImageService');
+          const result = await ChartImageService.saveTemporaryChartImages(recalculated.id, cleanedChartAttachments);
+
+          if (result.success) {
+            console.log('✅ Temporary chart images saved successfully');
+          } else {
+            console.error('❌ Failed to save temporary chart images:', result.error);
+            // Don't fail the entire save operation for chart upload issues
+          }
+        } catch (error) {
+          console.error('❌ Error saving temporary chart images:', error);
+          // Don't fail the entire save operation for chart upload issues
+        }
+      }
+
       setShouldClearSession(true); // Mark for session clearing after successful save
       console.log('✅ Trade saved successfully');
     } catch (error) {
@@ -1696,6 +1741,7 @@ import * as Papa from "papaparse"; // Centralized import
                           onImageUploaded={(chartImage, uploadMethod) => handleChartImageUploaded('beforeEntry', chartImage, uploadMethod)}
                           onImageDeleted={() => handleChartImageDeleted('beforeEntry')}
                           disabled={false}
+                          allowTemporary={true}
                         />
 
                         <ChartImageUpload
@@ -1705,6 +1751,7 @@ import * as Papa from "papaparse"; // Centralized import
                           onImageUploaded={(chartImage, uploadMethod) => handleChartImageUploaded('afterExit', chartImage, uploadMethod)}
                           onImageDeleted={() => handleChartImageDeleted('afterExit')}
                           disabled={false}
+                          allowTemporary={true}
                           suggestedUploadMethod={chartUploadMethods.beforeEntry}
                         />
                       </div>

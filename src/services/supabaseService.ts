@@ -220,6 +220,31 @@ export class SupabaseService {
     }
   }
 
+  /**
+   * Get trade directly from Supabase only (no local fallback)
+   * Used for verifying trade exists in Supabase for foreign key constraints
+   */
+  static async getTradeFromSupabaseOnly(id: string): Promise<Trade | null> {
+    try {
+      const userId = await AuthService.getUserId()
+      if (!userId) throw new Error('User not authenticated')
+
+      const { data, error } = await supabase
+        .from('trades')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single()
+
+      if (error && error.code !== 'PGRST116') throw error
+
+      return data ? dbRowToTrade(data) : null
+    } catch (error) {
+      console.error('❌ Failed to get trade from Supabase only:', error)
+      return null
+    }
+  }
+
   static async saveTrade(trade: Trade): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
@@ -789,6 +814,14 @@ export class SupabaseService {
       const userId = await AuthService.getUserId()
       if (!userId) throw new Error('User not authenticated')
 
+      // NEW: Check if tradeId is a valid UUID format
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tradeId);
+
+      if (!isUUID) {
+        console.log(`📦 [SUPABASE] Trade ID is not UUID format, skipping chart blob query: ${tradeId}`);
+        return [];
+      }
+
       const { data, error } = await supabase
         .from('chart_image_blobs')
         .select('*')
@@ -811,6 +844,14 @@ export class SupabaseService {
       const userId = await AuthService.getUserId()
       if (!userId) throw new Error('User not authenticated')
 
+      // NEW: Check if tradeId is a valid UUID format
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tradeId);
+
+      if (!isUUID) {
+        console.log(`📦 [SUPABASE] Trade ID is not UUID format, skipping chart blob deletion: ${tradeId}`);
+        return true; // Return true since there's nothing to delete for non-UUID trades
+      }
+
       const { error } = await supabase
         .from('chart_image_blobs')
         .delete()
@@ -818,7 +859,6 @@ export class SupabaseService {
         .eq('user_id', userId)
 
       if (error) throw error
-
 
       return true
     } catch (error) {
