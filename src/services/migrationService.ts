@@ -59,7 +59,7 @@ export class MigrationService {
       
       try {
         const trades = await DatabaseService.getAllTrades()
-        console.log(`📊 Found ${trades.length} trades to migrate`)
+
         
         if (trades.length > 0) {
           const success = await SupabaseService.saveAllTrades(trades)
@@ -191,7 +191,7 @@ export class MigrationService {
       
       try {
         const chartBlobs = await DatabaseService.getAllChartImageBlobs()
-        console.log(`📸 Found ${chartBlobs.length} chart images to migrate`)
+
         
         for (const blob of chartBlobs) {
           const success = await SupabaseService.saveChartImageBlob(blob)

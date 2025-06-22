@@ -205,41 +205,11 @@ export class ChartImageService {
         dataLength: base64Data.length
       });
 
-      console.log(`☁️ [${imageType.toUpperCase()}] Saving chart image to Supabase: ${chartImage.filename} (${chartImage.size} bytes)`);
-      console.log(`🔍 [${imageType.toUpperCase()}] Blob ID being saved: ${supabaseImageBlob.id}`);
-      console.log(`🔍 [${imageType.toUpperCase()}] Trade ID being used: ${supabaseImageBlob.trade_id}`);
-      console.log(`🔍 [${imageType.toUpperCase()}] Full Supabase blob object:`, {
-        id: supabaseImageBlob.id,
-        trade_id: supabaseImageBlob.trade_id,
-        image_type: supabaseImageBlob.image_type,
-        filename: supabaseImageBlob.filename,
-        mime_type: supabaseImageBlob.mime_type,
-        size_bytes: supabaseImageBlob.size_bytes,
-        dataLength: supabaseImageBlob.data.length,
-        uploaded_at: supabaseImageBlob.uploaded_at,
-        compressed: supabaseImageBlob.compressed,
-        original_size: supabaseImageBlob.original_size
-      });
+
 
       const supabaseSaved = await SupabaseService.saveChartImageBlob(supabaseImageBlob);
       if (!supabaseSaved) {
-        console.error(`❌ [${imageType.toUpperCase()}] Failed to save chart image to Supabase`);
         return { success: false, error: 'Failed to save image to cloud storage' };
-      }
-      console.log(`✅ [${imageType.toUpperCase()}] Chart image saved to Supabase successfully with blob ID: ${supabaseImageBlob.id}`);
-
-      // CRITICAL DEBUG: Check if the data actually exists in Supabase immediately after save
-      console.log(`🔍 [${imageType.toUpperCase()}] Verifying data exists in Supabase immediately after save...`);
-      try {
-        const verifyBlob = await SupabaseService.getChartImageBlob(supabaseImageBlob.id);
-        if (verifyBlob) {
-          console.log(`✅ [${imageType.toUpperCase()}] VERIFICATION SUCCESSFUL: Data exists in Supabase: ${verifyBlob.filename}`);
-        } else {
-          console.error(`❌ [${imageType.toUpperCase()}] VERIFICATION FAILED: Data NOT found in Supabase immediately after save!`);
-          console.error(`❌ [${imageType.toUpperCase()}] This indicates a Supabase RLS policy or database issue!`);
-        }
-      } catch (verifyError) {
-        console.error(`❌ [${imageType.toUpperCase()}] VERIFICATION ERROR:`, verifyError);
       }
 
 
@@ -353,22 +323,17 @@ export class ChartImageService {
                     decodedString += String.fromCharCode(parseInt(hexByte, 16));
                   }
 
-                  console.log(`🔍 [RETRIEVAL] Decoded hex string sample: ${decodedString.substring(0, 100)}`);
-
                   // Now check if the decoded string is JSON
                   if (decodedString.startsWith('{') || decodedString.startsWith('[')) {
-                    console.log(`✅ [RETRIEVAL] Decoded hex is JSON, parsing...`);
                     try {
                       const parsedData = JSON.parse(decodedString);
                       if (Array.isArray(parsedData) || (typeof parsedData === 'object' && parsedData !== null)) {
                         const arrayData = Array.isArray(parsedData) ? parsedData : Object.values(parsedData);
                         bytes = new Uint8Array(arrayData);
-                        console.log(`✅ [RETRIEVAL] Successfully parsed hex-encoded JSON to Uint8Array: ${bytes.length} bytes`);
                       } else {
                         throw new Error('Parsed data is not an array or object');
                       }
                     } catch (jsonError) {
-                      console.error(`❌ [RETRIEVAL] Failed to parse hex-decoded JSON:`, jsonError);
                       // Fallback: treat decoded string as raw binary
                       bytes = new Uint8Array(decodedString.length);
                       for (let i = 0; i < decodedString.length; i++) {
@@ -377,7 +342,6 @@ export class ChartImageService {
                     }
                   } else {
                     // Decoded hex is raw binary data
-                    console.log(`✅ [RETRIEVAL] Decoded hex is raw binary data`);
                     bytes = new Uint8Array(decodedString.length);
                     for (let i = 0; i < decodedString.length; i++) {
                       bytes[i] = decodedString.charCodeAt(i);
@@ -385,28 +349,23 @@ export class ChartImageService {
                   }
                 } else {
                   // The data might be a JSON string representation of an array
-                  console.log(`✅ [RETRIEVAL] Attempting to parse as JSON array`);
                   try {
                     const parsedData = JSON.parse(supabaseBlob.data);
                     if (Array.isArray(parsedData) || (typeof parsedData === 'object' && parsedData !== null)) {
                       // Convert object with numeric keys to array
                       const arrayData = Array.isArray(parsedData) ? parsedData : Object.values(parsedData);
                       bytes = new Uint8Array(arrayData);
-                      console.log(`✅ [RETRIEVAL] Successfully parsed JSON data to Uint8Array: ${bytes.length} bytes`);
                     } else {
                       throw new Error('Parsed data is not an array or object');
                     }
                   } catch (jsonError) {
-                    console.log(`⚠️ [RETRIEVAL] JSON parse failed, trying base64 decode`);
                     try {
                       const binaryString = atob(supabaseBlob.data);
                       bytes = new Uint8Array(binaryString.length);
                       for (let i = 0; i < binaryString.length; i++) {
                         bytes[i] = binaryString.charCodeAt(i);
                       }
-                      console.log(`✅ [RETRIEVAL] Base64 decode successful: ${bytes.length} bytes`);
                     } catch (base64Error) {
-                      console.error(`❌ [RETRIEVAL] Both JSON and base64 decode failed, trying direct string conversion`);
                       // Last resort: treat as raw string
                       bytes = new Uint8Array(supabaseBlob.data.length);
                       for (let i = 0; i < supabaseBlob.data.length; i++) {
@@ -416,7 +375,6 @@ export class ChartImageService {
                   }
                 }
               } else {
-                console.error(`❌ [RETRIEVAL] Unsupported data format:`, typeof supabaseBlob.data);
                 throw new Error(`Unsupported data format from Supabase: ${typeof supabaseBlob.data}`);
               }
 
@@ -424,12 +382,8 @@ export class ChartImageService {
 
               // Validate blob data
               if (!blobData || blobData.size === 0) {
-                console.error(`❌ Invalid blob data: size is ${blobData?.size || 0}`);
                 return null;
               }
-
-              // Convert Uint8Array directly to base64 data URL
-              console.log(`🔄 Converting Uint8Array to base64 data URL for stable reference`);
 
               // Convert Uint8Array to base64 string
               let base64String = '';
@@ -442,28 +396,20 @@ export class ChartImageService {
 
               const dataUrl = `data:${supabaseBlob.mime_type};base64,${base64Data}`;
 
-              console.log(`✅ Data URL created successfully from Supabase data: ${dataUrl.substring(0, 50)}...`);
-              console.log(`🔍 Original bytes length: ${bytes.length}, base64 length: ${base64Data.length}`);
-
               return dataUrl;
             } catch (decodeError) {
-              console.error(`❌ Failed to decode data for ${supabaseBlob.filename}:`, decodeError);
               return null;
             }
           } else {
-            console.log(`📭 Chart image not found in Supabase: ${chartImage.blobId}`);
             return null;
           }
         } catch (error) {
-          console.error(`❌ Failed to retrieve chart image from Supabase:`, error);
           return null;
         }
       }
 
-      console.warn(`⚠️ No blob ID found for chart image: ${chartImage.filename}`);
       return null;
     } catch (error) {
-      console.error('❌ Failed to get chart image data URL:', error);
       return null;
     }
   }
@@ -477,26 +423,17 @@ export class ChartImageService {
     chartImage: ChartImage
   ): Promise<boolean> {
     try {
-      console.log(`🗑️ Deleting ${imageType} chart image for trade ${tradeId}: ${chartImage.filename}`);
-
       // PURE SUPABASE: Delete from Supabase if user is authenticated
       if (chartImage.storage === 'blob' && chartImage.blobId) {
         const isAuthenticated = await AuthService.isAuthenticated();
         if (isAuthenticated) {
-          const supabaseDeleted = await SupabaseService.deleteChartImageBlob(chartImage.blobId);
-          if (!supabaseDeleted) {
-            console.warn('⚠️ Failed to delete chart image from Supabase, but continuing...');
-          } else {
-            console.log(`✅ Chart image deleted from Supabase: ${chartImage.filename}`);
-          }
+          await SupabaseService.deleteChartImageBlob(chartImage.blobId);
         }
       }
 
-      console.log(`✅ Chart image deleted successfully`);
       return true;
 
     } catch (error) {
-      console.error('❌ Failed to delete chart image:', error);
       return false;
     }
   }
@@ -506,19 +443,12 @@ export class ChartImageService {
    */
   static async deleteTradeChartImages(tradeId: string): Promise<boolean> {
     try {
-      console.log(`🗑️ Deleting all chart images for trade ${tradeId}`);
-      
       // Delete all blob storage for this trade
-      const blobsDeleted = await DatabaseService.deleteTradeChartImageBlobs(tradeId);
-      if (!blobsDeleted) {
-        console.warn('⚠️ Failed to delete some chart image blobs');
-      }
-      
-      console.log(`✅ All chart images deleted for trade ${tradeId}`);
+      await DatabaseService.deleteTradeChartImageBlobs(tradeId);
+
       return true;
-      
+
     } catch (error) {
-      console.error('❌ Failed to delete trade chart images:', error);
       return false;
     }
   }
@@ -550,7 +480,6 @@ export class ChartImageService {
         blobSize: blobSize,
       };
     } catch (error) {
-      console.error('❌ Failed to get storage stats:', error);
       return {
         totalImages: 0,
         totalSize: 0,
@@ -568,12 +497,9 @@ export class ChartImageService {
    */
   static async cleanupOrphanedBlobs(): Promise<{ cleaned: number; errors: number }> {
     try {
-      console.log('🧹 [CLEANUP] Starting orphaned blobs cleanup (Pure Supabase mode)...');
-
       // Check if user is authenticated for Supabase operations
       const isAuthenticated = await AuthService.isAuthenticated();
       if (!isAuthenticated) {
-        console.log('⚠️ [CLEANUP] User not authenticated, skipping Supabase cleanup');
         return { cleaned: 0, errors: 0 };
       }
 
@@ -583,57 +509,38 @@ export class ChartImageService {
         SupabaseService.getAllTrades()
       ]);
 
-      console.log(`🔍 [CLEANUP] Found ${allBlobs.length} chart image blobs and ${allTrades.length} trades in Supabase`);
-
       // Convert trade IDs to the same format used in chart images (UUID conversion)
       const tradeIds = new Set();
-      console.log(`🔍 [CLEANUP] Processing ${allTrades.length} trades for ID matching...`);
 
       for (const trade of allTrades) {
         // Add both original ID and converted UUID to handle both formats
         tradeIds.add(trade.id);
-        console.log(`🔍 [CLEANUP] Added original trade ID: ${trade.id}`);
 
         // Also add the UUID conversion if it's different
         const convertedId = this.convertTradeIdToUUID(trade.id);
         if (convertedId !== trade.id) {
           tradeIds.add(convertedId);
-          console.log(`🔍 [CLEANUP] Added converted trade ID: ${convertedId}`);
         }
       }
-
-      console.log(`🔍 [CLEANUP] Total trade IDs in set: ${tradeIds.size}`);
-      console.log(`🔍 [CLEANUP] Trade IDs:`, Array.from(tradeIds));
 
       let cleaned = 0;
       let errors = 0;
 
       for (const blob of allBlobs) {
-        console.log(`🔍 [CLEANUP] Checking blob: ${blob.filename} with trade_id: ${blob.trade_id}`);
-        console.log(`🔍 [CLEANUP] Trade ID exists in set: ${tradeIds.has(blob.trade_id)}`);
-
         if (!tradeIds.has(blob.trade_id)) {
-          console.log(`🗑️ [CLEANUP] WOULD DELETE orphaned blob: ${blob.filename} (trade_id: ${blob.trade_id})`);
-          console.log(`🗑️ [CLEANUP] Available trade IDs:`, Array.from(tradeIds));
-
           // TEMPORARILY DISABLE actual deletion for debugging
-          console.log(`⚠️ [CLEANUP] Deletion temporarily disabled for debugging`);
           // const deleted = await SupabaseService.deleteChartImageBlob(blob.id);
           // if (deleted) {
           //   cleaned++;
           // } else {
           //   errors++;
           // }
-        } else {
-          console.log(`✅ [CLEANUP] Blob is valid, keeping: ${blob.filename}`);
         }
       }
 
-      console.log(`✅ [CLEANUP] Cleanup completed: ${cleaned} blobs cleaned, ${errors} errors`);
       return { cleaned, errors };
 
     } catch (error) {
-      console.error('❌ [CLEANUP] Failed to cleanup orphaned blobs:', error);
       return { cleaned: 0, errors: 1 };
     }
   }
@@ -664,12 +571,9 @@ export class ChartImageService {
    */
   static async cleanupOrphanedAttachments(): Promise<{ cleaned: number; errors: number }> {
     try {
-      console.log('🧹 [CLEANUP] Starting cleanup of orphaned chart attachments in trade records (Pure Supabase mode)...');
-
       // Check if user is authenticated for Supabase operations
       const isAuthenticated = await AuthService.isAuthenticated();
       if (!isAuthenticated) {
-        console.log('⚠️ [CLEANUP] User not authenticated, skipping attachment cleanup');
         return { cleaned: 0, errors: 0 };
       }
 
@@ -678,8 +582,6 @@ export class ChartImageService {
         SupabaseService.getAllTrades(),
         SupabaseService.getAllChartImageBlobs()
       ]);
-
-      console.log(`🔍 [CLEANUP] Found ${allTrades.length} trades and ${allBlobs.length} chart image blobs in Supabase`);
 
       const blobIds = new Set(allBlobs.map(blob => blob.id));
 
@@ -696,7 +598,6 @@ export class ChartImageService {
         if (updatedAttachments.beforeEntry) {
           const attachment = updatedAttachments.beforeEntry;
           if (attachment.storage === 'blob' && attachment.blobId && !blobIds.has(attachment.blobId)) {
-            console.log(`🗑️ Removing orphaned beforeEntry attachment from trade ${trade.id}: ${attachment.filename}`);
             delete updatedAttachments.beforeEntry;
             needsUpdate = true;
           }
@@ -706,7 +607,6 @@ export class ChartImageService {
         if (updatedAttachments.afterExit) {
           const attachment = updatedAttachments.afterExit;
           if (attachment.storage === 'blob' && attachment.blobId && !blobIds.has(attachment.blobId)) {
-            console.log(`🗑️ Removing orphaned afterExit attachment from trade ${trade.id}: ${attachment.filename}`);
             delete updatedAttachments.afterExit;
             needsUpdate = true;
           }
@@ -738,11 +638,9 @@ export class ChartImageService {
         }
       }
 
-      console.log(`✅ Attachment cleanup completed: ${cleaned} trades cleaned, ${errors} errors`);
       return { cleaned, errors };
 
     } catch (error) {
-      console.error('❌ Failed to cleanup orphaned attachments:', error);
       return { cleaned: 0, errors: 1 };
     }
   }
@@ -756,8 +654,6 @@ export class ChartImageService {
     errors: number
   }> {
     try {
-      console.log('🧹 Starting comprehensive cleanup of all orphaned chart data...');
-
       // First cleanup orphaned blobs
       const blobCleanup = await this.cleanupOrphanedBlobs();
 
@@ -766,8 +662,6 @@ export class ChartImageService {
 
       const totalErrors = blobCleanup.errors + attachmentCleanup.errors;
 
-      console.log(`✅ Comprehensive cleanup completed: ${blobCleanup.cleaned} blobs, ${attachmentCleanup.cleaned} attachments, ${totalErrors} errors`);
-
       return {
         blobsCleaned: blobCleanup.cleaned,
         attachmentsCleaned: attachmentCleanup.cleaned,
@@ -775,7 +669,6 @@ export class ChartImageService {
       };
 
     } catch (error) {
-      console.error('❌ Failed to perform comprehensive cleanup:', error);
       return { blobsCleaned: 0, attachmentsCleaned: 0, errors: 1 };
     }
   }

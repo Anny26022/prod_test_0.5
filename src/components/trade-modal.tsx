@@ -241,7 +241,7 @@ import * as Papa from "papaparse"; // Centralized import
     isUploadOnlyMode = false,
     isActionsEditMode = false,
   }) => {
-    console.log("[TradeModal] Initial Symbol:", initialSymbol); // Log initial symbol
+
 
     // Track if CMP was manually set by user
     const [cmpManuallySet, setCmpManuallySet] = React.useState(false);
@@ -273,10 +273,10 @@ import * as Papa from "papaparse"; // Centralized import
       if (saved) {
         try {
           const parsedData = JSON.parse(saved);
-          console.log('📂 Loaded form data from sessionStorage');
+
           return parsedData;
         } catch (error) {
-          console.warn('⚠️ Failed to parse sessionStorage data:', error);
+
         }
       }
 
@@ -294,24 +294,24 @@ import * as Papa from "papaparse"; // Centralized import
           const latestBackup = localStorage.getItem(backupKeys[0]);
           if (latestBackup) {
             const backup = JSON.parse(latestBackup);
-            console.log('🔄 Recovered form data from backup:', backup.timestamp);
+
             return backup.formData;
           }
         }
       } catch (error) {
-        console.warn('⚠️ Failed to recover from backup:', error);
+
       }
     }
 
     // Fallback to default initialization
     if (trade) {
-      console.log('📝 Initializing with existing trade data');
+
       return { ...defaultTrade, ...trade, slPercent: (trade as any).slPercent || 0 };
     } else if (mode === 'add') {
-      console.log('➕ Initializing new trade form');
+
       return { ...defaultTrade, tradeNo: nextTradeNo };
     } else {
-      console.log('🔧 Initializing with default trade data');
+
       return defaultTrade;
     }
   });
@@ -352,10 +352,10 @@ import * as Papa from "papaparse"; // Centralized import
       setActiveTab('charts');
       // Trigger chart refresh to ensure latest data is shown
       setChartRefreshTrigger(prev => prev + 1);
-      console.log('🔄 Upload-only mode activated, triggering chart refresh');
+
     } else if (isActionsEditMode) {
       setActiveTab('basic');
-      console.log('🔄 Actions edit mode activated, charts tab disabled');
+
     }
   }, [isUploadOnlyMode, isActionsEditMode]);
 
@@ -399,7 +399,7 @@ import * as Papa from "papaparse"; // Centralized import
           SupabaseService.getTrade(trade.id)
         ]);
 
-        console.log(`📸 [TradeModal] Loading chart images for trade ${trade.id}:`, supabaseBlobs.length, 'blobs found');
+
 
         // Start with the current trade's chart attachments (if any)
         let attachments: TradeChartAttachments = {};
@@ -412,7 +412,7 @@ import * as Papa from "papaparse"; // Centralized import
         // Process Supabase blob storage images and add/update them
         if (supabaseBlobs.length > 0) {
           for (const supabaseBlob of supabaseBlobs) {
-            console.log(`📸 [TradeModal] Processing Supabase blob: ${supabaseBlob.filename} (${supabaseBlob.image_type})`);
+
 
             // Create chart image object with blob reference
             const chartImage: ChartImage = {
@@ -432,12 +432,9 @@ import * as Papa from "papaparse"; // Centralized import
               const dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
               if (dataUrl) {
                 chartImage.dataUrl = dataUrl;
-                console.log(`✅ [TradeModal] Generated data URL for ${supabaseBlob.filename}`);
-              } else {
-                console.warn(`⚠️ [TradeModal] Failed to generate data URL for ${supabaseBlob.filename}`);
               }
             } catch (error) {
-              console.error(`❌ [TradeModal] Error generating data URL for ${supabaseBlob.filename}:`, error);
+              // Silent error handling
             }
 
             attachments[supabaseBlob.image_type as 'beforeEntry' | 'afterExit'] = chartImage;
@@ -465,7 +462,7 @@ import * as Papa from "papaparse"; // Centralized import
         }
 
         setChartAttachments(attachments);
-        console.log(`📸 Loaded chart attachments for trade ${trade.id}:`, attachments);
+
       } catch (error) {
         console.error('Failed to load chart image blobs:', error);
       }
@@ -656,7 +653,7 @@ import * as Papa from "papaparse"; // Centralized import
         ...prev,
         [imageType]: uploadMethod
       }));
-      console.log(`📊 Tracked upload method for ${imageType}: ${uploadMethod}`);
+
     }
 
     // CRITICAL FIX: Immediately update the trade in the database if it's an existing trade
@@ -670,29 +667,24 @@ import * as Papa from "papaparse"; // Centralized import
 
         // Save the updated trade to database immediately
         onSave(updatedTrade);
-        console.log(`✅ Chart ${imageType} uploaded and trade updated immediately`);
+
       } catch (error) {
         console.error('❌ Failed to update trade with chart attachment:', error);
       }
     } else if (isUploadOnlyMode) {
-      console.log(`📸 Chart ${imageType} uploaded in upload-only mode - will save when user manually submits`);
+
     }
   }, [chartAttachments, mode, trade, onSave, isUploadOnlyMode]);
 
   const handleChartImageDeleted = React.useCallback(async (imageType: 'beforeEntry' | 'afterExit') => {
-    console.log(`🗑️ [TradeModal] handleChartImageDeleted called for ${imageType}`);
-    console.log(`🗑️ [TradeModal] Current chartAttachments:`, chartAttachments);
-    console.log(`🗑️ [TradeModal] Upload-only mode: ${isUploadOnlyMode}`);
-
     const deletedImage = chartAttachments[imageType];
-    console.log(`🗑️ [TradeModal] Deleting image:`, deletedImage?.filename);
 
     const newAttachments = { ...chartAttachments };
     delete newAttachments[imageType];
 
     // Check if we have any remaining chart attachments
     const hasRemainingAttachments = newAttachments.beforeEntry || newAttachments.afterExit;
-    console.log(`🗑️ [TradeModal] Has remaining attachments: ${hasRemainingAttachments}`);
+
 
     const updatedChartAttachments = hasRemainingAttachments ? {
       ...newAttachments,
@@ -703,7 +695,7 @@ import * as Papa from "papaparse"; // Centralized import
       }
     } : undefined; // Set to undefined if no attachments remain
 
-    console.log(`🗑️ [TradeModal] Updated chart attachments:`, updatedChartAttachments);
+
 
     // Update local state
     setChartAttachments(updatedChartAttachments || {});
@@ -723,21 +715,17 @@ import * as Papa from "papaparse"; // Centralized import
           chartAttachments: updatedChartAttachments // This will be undefined if no attachments remain
         };
 
-        console.log(`💾 [TradeModal] Saving updated trade to database:`, {
-          tradeId: trade.id,
-          hasChartAttachments: !!updatedChartAttachments,
-          chartAttachments: updatedChartAttachments
-        });
+
 
         // Save the updated trade to database immediately
         // Note: In upload-only mode, this won't close the modal because we're not changing the modal state
         onSave(updatedTrade);
-        console.log(`✅ Chart ${imageType} deleted and trade updated immediately in database (upload-only mode: ${isUploadOnlyMode})`);
+
       } catch (error) {
         console.error('❌ Failed to update trade after chart deletion:', error);
       }
     } else {
-      console.warn(`⚠️ [TradeModal] No trade ID available for saving chart deletion`);
+
     }
 
     // Also ensure the form data is updated to reflect the deletion
@@ -754,7 +742,7 @@ import * as Papa from "papaparse"; // Centralized import
       });
     }
 
-    console.log(`🗑️ Chart ${imageType} deleted - ${hasRemainingAttachments ? 'remaining attachments preserved' : 'all attachments removed'}`);
+
   }, [chartAttachments, trade, onSave, isUploadOnlyMode]);
 
   const handleChartImageView = React.useCallback((chartImage: ChartImage, title: string) => {

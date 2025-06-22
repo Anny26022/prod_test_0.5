@@ -61,32 +61,19 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
   React.useEffect(() => {
     if (suggestedUploadMethod && !currentImage) {
       setUploadMethod(suggestedUploadMethod);
-      console.log(`🔄 Auto-selected ${suggestedUploadMethod} method for ${imageType} chart (matching beforeEntry)`);
+
     }
   }, [suggestedUploadMethod, currentImage, imageType]);
   
   // Load preview URL for current image
   React.useEffect(() => {
-    console.log(`🖼️ [${imageType.toUpperCase()}] ChartImageUpload currentImage changed:`, currentImage ? `${currentImage.filename} (${currentImage.id})` : 'null');
-
     if (currentImage) {
-      console.log(`🖼️ [${imageType.toUpperCase()}] Image details:`, {
-        id: currentImage.id,
-        filename: currentImage.filename,
-        storage: currentImage.storage,
-        blobId: currentImage.blobId,
-        size: currentImage.size,
-        mimeType: currentImage.mimeType,
-        hasDataUrl: !!currentImage.dataUrl
-      });
 
       // If the image already has a dataUrl (loaded from database), use it directly
       if (currentImage.dataUrl) {
         setPreviewUrl(currentImage.dataUrl);
-        console.log(`✅ [${imageType.toUpperCase()}] Using existing dataUrl for preview: ${currentImage.dataUrl.substring(0, 50)}...`);
       } else {
         // Otherwise, fetch from service
-        console.log(`🔍 [${imageType.toUpperCase()}] Fetching dataUrl from service for: ${currentImage.filename}`);
 
         // Clear any existing error state
         setError(null);
@@ -96,24 +83,21 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
             // Add a small delay to ensure the data URL is fully ready
             setTimeout(() => {
               setPreviewUrl(url);
-              console.log(`✅ [${imageType.toUpperCase()}] Preview URL loaded from service: ${url.substring(0, 50)}...`);
+
             }, 100);
           } else {
-            console.error(`❌ [${imageType.toUpperCase()}] Service returned null URL`);
+
             setPreviewUrl(null);
             setError('Failed to load image from cloud storage');
           }
         }).catch(error => {
-          console.error(`❌ [${imageType.toUpperCase()}] Failed to load preview URL:`, {
-            message: error?.message || 'Unknown error',
-            name: error?.name || 'Error'
-          });
+
           setPreviewUrl(null);
           setError('Failed to load image preview');
         });
       }
     } else {
-      console.log(`🖼️ [${imageType.toUpperCase()}] No current image, clearing preview`);
+
       setPreviewUrl(null);
     }
   }, [currentImage, imageType]);
@@ -142,17 +126,17 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
 
   // Convert TradingView URL to direct S3 image URL
   const getTradingViewImageUrl = useCallback((url: string): string => {
-    console.log(`🔗 Converting URL: ${url}`);
+
 
     // If it's already a direct S3 image URL, return as-is
     if (url.includes('s3.tradingview.com/snapshots/')) {
-      console.log(`✅ Already S3 URL: ${url}`);
+
       return url;
     }
 
     // If it's already an image URL, return as-is
     if (url.includes('.png') || url.includes('.jpg') || url.includes('.jpeg') || url.includes('.webp')) {
-      console.log(`✅ Already image URL: ${url}`);
+
       return url;
     }
 
@@ -163,7 +147,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
     const xUrlMatch = url.match(/tradingview\.com\/x\/([a-zA-Z0-9]+)\/?/);
     if (xUrlMatch) {
       snapshotId = xUrlMatch[1];
-      console.log(`📸 Found snapshot ID from /x/ URL: ${snapshotId}`);
+
     }
 
     // Pattern 2: https://www.tradingview.com/chart/SYMBOL/SNAPSHOT_ID/
@@ -171,7 +155,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       const chartUrlMatch = url.match(/tradingview\.com\/chart\/[^\/]+\/([a-zA-Z0-9]+)\/?/);
       if (chartUrlMatch) {
         snapshotId = chartUrlMatch[1];
-        console.log(`📸 Found snapshot ID from chart URL: ${snapshotId}`);
+
       }
     }
 
@@ -180,7 +164,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       const paramMatch = url.match(/[?&]snapshot[_-]?id=([a-zA-Z0-9]+)/i);
       if (paramMatch) {
         snapshotId = paramMatch[1];
-        console.log(`📸 Found snapshot ID from parameters: ${snapshotId}`);
+
       }
     }
 
@@ -190,7 +174,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       if (idMatches) {
         // Take the last match as it's likely the snapshot ID
         snapshotId = idMatches[idMatches.length - 1];
-        console.log(`📸 Found potential snapshot ID: ${snapshotId}`);
+
       }
     }
 
@@ -198,7 +182,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
     if (snapshotId && snapshotId.length >= 8) {
       const firstLetter = snapshotId.charAt(0).toLowerCase();
       const s3Url = `https://s3.tradingview.com/snapshots/${firstLetter}/${snapshotId}.png`;
-      console.log(`🎯 Constructed S3 URL: ${s3Url}`);
+
       return s3Url;
     }
 
@@ -206,7 +190,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
     if (url.includes('tradingview.com/widgetembed/')) {
       const symbolMatch = url.match(/symbol=([^&]+)/);
       if (symbolMatch) {
-        console.log(`🔄 Converting widget URL to chart URL`);
+
         return `https://www.tradingview.com/chart/?symbol=${symbolMatch[1]}`;
       }
     }
@@ -214,7 +198,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
     // For other formats, try to append image export parameters (fallback)
     const separator = url.includes('?') ? '&' : '?';
     const fallbackUrl = `${url}${separator}format=image&width=1200&height=600`;
-    console.log(`⚠️ Using fallback URL: ${fallbackUrl}`);
+
     return fallbackUrl;
   }, []);
 
@@ -271,7 +255,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
         const chartImageWithPreview = await ensureChartImageDataUrl(result.chartImage);
         onImageUploaded(chartImageWithPreview, 'url');
         setTradingViewUrl(''); // Clear the URL input
-        console.log(`✅ ${title} uploaded from TradingView URL successfully`);
+
       } else {
         setError(result.error || 'Upload failed');
       }
@@ -323,7 +307,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
         // Ensure the chart image has a dataUrl for immediate preview
         const chartImageWithPreview = await ensureChartImageDataUrl(result.chartImage);
         onImageUploaded(chartImageWithPreview, 'file');
-        console.log(`✅ ${title} uploaded successfully`);
+
       } else {
         setError(result.error || 'Upload failed');
       }
@@ -372,23 +356,17 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
   const handleDelete = useCallback(async () => {
     if (!currentImage || disabled) return;
 
-    console.log(`🗑️ [${imageType}] Starting deletion of chart image:`, currentImage.filename);
+
 
     try {
       const success = await ChartImageService.deleteChartImage(tradeId, imageType, currentImage);
       if (success) {
-        console.log(`🗑️ [${imageType}] Chart image service deletion successful, calling onImageDeleted`);
         onImageDeleted();
-        console.log(`✅ [${imageType}] ${title} deleted successfully`);
       } else {
-        console.error(`❌ [${imageType}] Chart image service deletion failed`);
         setError('Failed to delete image');
       }
     } catch (error) {
-      console.error(`❌ [${imageType}] Chart image delete error:`, {
-        message: error instanceof Error ? error.message : 'Unknown error',
-        name: error instanceof Error ? error.name : 'Error'
-      });
+
       setError(error instanceof Error ? error.message : 'Delete failed');
     }
   }, [currentImage, tradeId, imageType, onImageDeleted, disabled, title]);
@@ -466,16 +444,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
                 src={previewUrl}
                 alt={title}
                 className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
-                onLoad={() => {
-                  console.log(`✅ [${imageType.toUpperCase()}] Image loaded successfully: ${previewUrl?.substring(0, 50)}...`);
-                }}
-                onError={(e) => {
-                  console.error(`❌ [${imageType.toUpperCase()}] Image failed to load:`, {
-                    src: previewUrl,
-                    errorType: e.type,
-                    currentImage: currentImage?.filename
-                  });
-                  // Set error state to show user-friendly message
+                onError={() => {
                   setError('Failed to load image preview');
                 }}
               />

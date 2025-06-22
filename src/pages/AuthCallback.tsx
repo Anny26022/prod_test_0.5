@@ -14,23 +14,28 @@ export const AuthCallback: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const searchParams = new URLSearchParams(location.search)
-        const code = searchParams.get('code')
-        const error = searchParams.get('error')
-        const errorDescription = searchParams.get('error_description')
+        console.log('🔄 Auth callback URL:', window.location.href)
 
-        // Check for errors first
+        // Check URL parameters for errors first
+        const searchParams = new URLSearchParams(location.search)
+        const hashParams = new URLSearchParams(location.hash.substring(1))
+
+        const error = searchParams.get('error') || hashParams.get('error')
+        const errorDescription = searchParams.get('error_description') || hashParams.get('error_description')
+        const code = searchParams.get('code')
+        const accessToken = hashParams.get('access_token')
+
+        console.log('🔍 URL params:', { error, errorDescription, code, accessToken })
+
         if (error) {
-          console.error('OAuth error:', error, errorDescription)
           setError(errorDescription || error)
           setStatus('error')
           return
         }
 
-        // Handle the code exchange
+        // Handle PKCE flow with code
         if (code) {
-          console.log('🔄 Processing OAuth callback with code...')
-
+          console.log('🔄 Processing PKCE flow with code...')
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
 
           if (exchangeError) {
@@ -41,38 +46,38 @@ export const AuthCallback: React.FC = () => {
           }
 
           if (data.session) {
-            console.log('✅ OAuth authentication successful!')
+            console.log('✅ PKCE authentication successful!')
             setStatus('success')
-
-            // Redirect to home page after a brief delay
             setTimeout(() => {
               history.replace('/')
             }, 1500)
-          } else {
-            setError('Authentication failed - no session established')
-            setStatus('error')
-          }
-        } else {
-          // No code parameter, check if we already have a session
-          const { data, error: sessionError } = await supabase.auth.getSession()
-
-          if (sessionError) {
-            console.error('❌ Session error:', sessionError)
-            setError(sessionError.message)
-            setStatus('error')
             return
           }
+        }
 
-          if (data.session) {
-            console.log('✅ Existing session found!')
-            setStatus('success')
-            setTimeout(() => {
-              history.replace('/')
-            }, 1500)
-          } else {
-            setError('No authorization code received')
-            setStatus('error')
-          }
+        // Handle implicit flow or check existing session
+        console.log('🔄 Checking for existing session...')
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Give Supabase time to process
+
+        const { data, error: sessionError } = await supabase.auth.getSession()
+
+        if (sessionError) {
+          console.error('❌ Session error:', sessionError)
+          setError(sessionError.message)
+          setStatus('error')
+          return
+        }
+
+        if (data.session) {
+          console.log('✅ Session found!')
+          setStatus('success')
+          setTimeout(() => {
+            history.replace('/')
+          }, 1500)
+        } else {
+          console.warn('⚠️ No session found')
+          setError('Authentication failed - no session established')
+          setStatus('error')
         }
       } catch (error) {
         console.error('❌ Auth callback error:', error)
@@ -82,7 +87,7 @@ export const AuthCallback: React.FC = () => {
     }
 
     handleAuthCallback()
-  }, [location.search, history])
+  }, [location.search, location.hash, history])
 
   if (status === 'loading') {
     return (

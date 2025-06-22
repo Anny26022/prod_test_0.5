@@ -247,10 +247,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                 };
 
                 imagesWithDataUrls.push(imageWithContext);
-                console.log(`✅ [UniversalChartViewer] Added afterExit image:`, {
-                  filename: imageWithContext.filename,
-                  tradeName: imageWithContext.tradeName
-                });
+
               }
             }
           }
@@ -288,26 +285,8 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
         return dateB - dateA;
       });
 
-      console.log(`🔍 [UniversalChartViewer] Final results:`, {
-        totalImagesProcessed: imagesWithDataUrls.length,
-        uniqueImages: sortedImages.length,
-        tradesProcessed: allTrades.length,
-        tradesWithChartAttachments: allTrades.filter(t => t.chartAttachments).length,
-        finalSortedImages: sortedImages
-      });
-
-      if (sortedImages.length === 0) {
-        console.warn(`⚠️ [UniversalChartViewer] No images found! Check:`, {
-          tradesCount: allTrades.length,
-          tradesWithChartAttachments: allTrades.filter(t => t.chartAttachments).length,
-          imagesWithDataUrlsCount: imagesWithDataUrls.length
-        });
-      }
-
       setAllImages(sortedImages);
       setLoadingProgress(100);
-
-      console.log(`✅ [UniversalChartViewer] Loading complete. Setting ${sortedImages.length} images.`);
 
       // Preload first few images
       preloadAdjacentImages(0, imagesWithDataUrls);

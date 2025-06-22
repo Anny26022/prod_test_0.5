@@ -260,7 +260,7 @@ export class DatabaseService {
   static async deleteTrade(id: string): Promise<boolean> {
     try {
       await db.trades.delete(id);
-      console.log(`✅ Deleted trade: ${id}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to delete trade from IndexedDB:', error);
@@ -341,7 +341,7 @@ export class DatabaseService {
         await db.portfolioData.clear();
         await db.portfolioData.bulkAdd(data);
       });
-      console.log(`✅ Saved ${data.length} portfolio records to IndexedDB`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to save portfolio data to IndexedDB:', error);
@@ -373,7 +373,7 @@ export class DatabaseService {
         await db.backups.bulkDelete(toDelete.map(b => b.id!));
       }
 
-      console.log(`✅ Created backup for ${type}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to create backup:', error);
@@ -409,7 +409,7 @@ export class DatabaseService {
   static async saveTaxData(year: number, data: any): Promise<boolean> {
     try {
       await db.taxData.put({ year, data });
-      console.log(`✅ Saved tax data for year ${year}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to save tax data to IndexedDB:', error);
@@ -431,7 +431,7 @@ export class DatabaseService {
   static async saveCommentaryData(year: string, data: any): Promise<boolean> {
     try {
       await db.commentaryData.put({ year, data });
-      console.log(`✅ Saved commentary data for year ${year}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to save commentary data to IndexedDB:', error);
@@ -533,7 +533,7 @@ export class DatabaseService {
   static async deleteMiscData(key: string): Promise<boolean> {
     try {
       await db.miscData.where('key').equals(key).delete();
-      console.log(`✅ Deleted misc data: ${key}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to delete misc data from IndexedDB:', error);
@@ -545,25 +545,21 @@ export class DatabaseService {
 
   static async saveChartImageBlob(imageBlob: ChartImageBlob): Promise<boolean> {
     try {
-      console.log(`💾 DatabaseService: Saving blob: ${imageBlob.filename}`);
-      console.log(`🔍 DatabaseService: Blob ID: ${imageBlob.id}`);
-      console.log(`🔍 DatabaseService: Blob data type:`, imageBlob.data?.constructor.name);
-      console.log(`🔍 DatabaseService: Blob data size:`, imageBlob.data?.size);
-      console.log(`🔍 DatabaseService: Expected size: ${imageBlob.size}`);
+
 
       // Validate blob data before saving
       if (!imageBlob.data || !(imageBlob.data instanceof Blob)) {
-        console.error(`❌ DatabaseService: Invalid blob data for ${imageBlob.filename}`);
+
         return false;
       }
 
       if (imageBlob.data.size === 0) {
-        console.error(`❌ DatabaseService: Empty blob data for ${imageBlob.filename}`);
+
         return false;
       }
 
       await db.chartImageBlobs.put(imageBlob);
-      console.log(`✅ DatabaseService: Successfully saved chart image blob: ${imageBlob.filename} (${imageBlob.size} bytes)`);
+
       return true;
     } catch (error) {
       console.error('❌ DatabaseService: Failed to save chart image blob:', error);
@@ -573,27 +569,24 @@ export class DatabaseService {
 
   static async getChartImageBlob(id: string): Promise<ChartImageBlob | null> {
     try {
-      console.log(`🔍 DatabaseService: Looking for blob with ID: ${id}`);
+
       const blob = await db.chartImageBlobs.get(id);
 
       if (blob) {
-        console.log(`📦 DatabaseService: Found blob: ${blob.filename}`);
-        console.log(`🔍 DatabaseService: Blob data type:`, blob.data?.constructor.name);
-        console.log(`🔍 DatabaseService: Blob data size:`, blob.data?.size);
-        console.log(`🔍 DatabaseService: Blob MIME type:`, blob.mimeType);
+
 
         // Validate the blob data
         if (!blob.data || !(blob.data instanceof Blob)) {
-          console.error(`❌ DatabaseService: Invalid blob data for ${blob.filename}`);
+
           return null;
         }
 
         if (blob.data.size === 0) {
-          console.error(`❌ DatabaseService: Empty blob data for ${blob.filename}`);
+
           return null;
         }
       } else {
-        console.log(`📭 DatabaseService: No blob found with ID: ${id}`);
+
       }
 
       return blob || null;
@@ -624,7 +617,7 @@ export class DatabaseService {
   static async deleteChartImageBlob(id: string): Promise<boolean> {
     try {
       await db.chartImageBlobs.delete(id);
-      console.log(`🗑️ Deleted chart image blob: ${id}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to delete chart image blob:', error);
@@ -636,12 +629,12 @@ export class DatabaseService {
     try {
       const blob = await db.chartImageBlobs.get(blobId);
       if (!blob) {
-        console.warn(`⚠️ Chart image blob not found: ${blobId}`);
+
         return false;
       }
 
       await db.chartImageBlobs.update(blobId, { tradeId: newTradeId });
-      console.log(`📸 Updated chart image blob tradeId: ${blobId} -> ${newTradeId}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to update chart image blob tradeId:', error);
@@ -652,7 +645,7 @@ export class DatabaseService {
   static async deleteTradeChartImageBlobs(tradeId: string): Promise<boolean> {
     try {
       const count = await db.chartImageBlobs.where('tradeId').equals(tradeId).delete();
-      console.log(`🗑️ Deleted ${count} chart image blobs for trade: ${tradeId}`);
+
       return true;
     } catch (error) {
       console.error('❌ Failed to delete trade chart image blobs:', error);

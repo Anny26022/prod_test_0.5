@@ -288,7 +288,7 @@ export class SupabaseService {
         if (insertError) throw insertError
       }
 
-      console.log(`✅ Successfully saved ${trades.length} trades to Supabase`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to save all trades to Supabase:', error)
@@ -315,7 +315,7 @@ export class SupabaseService {
       // Remove from mapping
       idMappings.delete(id)
 
-      console.log(`✅ Deleted trade: ${id}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to delete trade from Supabase:', error)
@@ -411,7 +411,7 @@ export class SupabaseService {
 
       if (insertError) throw insertError
 
-      console.log(`✅ Saved ${data.length} portfolio records to Supabase`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to save portfolio data to Supabase:', error)
@@ -504,7 +504,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`✅ Saved tax data for year ${year}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to save tax data to Supabase:', error)
@@ -618,7 +618,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`✅ Deleted misc data: ${key}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to delete misc data from Supabase:', error)
@@ -629,41 +629,22 @@ export class SupabaseService {
   // ===== CHART IMAGE BLOBS =====
 
   static async saveChartImageBlob(imageBlob: any): Promise<boolean> {
-    console.log(`🚀 [SUPABASE] saveChartImageBlob called with:`, {
-      filename: imageBlob.filename,
-      id: imageBlob.id,
-      trade_id: imageBlob.trade_id,
-      image_type: imageBlob.image_type
-    });
+
 
     try {
       const userId = await AuthService.getUserId()
       if (!userId) {
-        console.error(`❌ [SUPABASE] User not authenticated`)
+
         throw new Error('User not authenticated')
       }
 
-      console.log(`📸 [SUPABASE] User authenticated: ${userId}`)
-      console.log(`📸 [SUPABASE] Attempting to save chart image blob: ${imageBlob.filename}`)
-      console.log(`🔍 [SUPABASE] Image blob data:`, {
-        id: imageBlob.id,
-        trade_id: imageBlob.trade_id,
-        image_type: imageBlob.image_type,
-        filename: imageBlob.filename,
-        mime_type: imageBlob.mime_type,
-        size_bytes: imageBlob.size_bytes,
-        dataLength: imageBlob.data?.length,
-        compressed: imageBlob.compressed,
-        original_size: imageBlob.original_size
-      })
+
 
       // Convert base64 to binary for bytea storage
       let binaryData: Uint8Array;
       try {
         binaryData = Uint8Array.from(atob(imageBlob.data), c => c.charCodeAt(0))
-        console.log(`✅ Base64 conversion successful: ${binaryData.length} bytes`)
       } catch (conversionError) {
-        console.error(`❌ Base64 conversion failed:`, conversionError)
         throw new Error('Failed to convert base64 data')
       }
 
@@ -681,19 +662,7 @@ export class SupabaseService {
         original_size: imageBlob.original_size
       };
 
-      console.log(`🔍 About to insert chart image blob:`, {
-        id: insertData.id,
-        user_id: insertData.user_id,
-        trade_id: insertData.trade_id,
-        image_type: insertData.image_type,
-        filename: insertData.filename,
-        mime_type: insertData.mime_type,
-        size_bytes: insertData.size_bytes,
-        binaryDataLength: binaryData.length,
-        uploaded_at: insertData.uploaded_at,
-        compressed: insertData.compressed,
-        original_size: insertData.original_size
-      });
+
 
       const { data: insertResult, error } = await supabase
         .from('chart_image_blobs')
@@ -701,17 +670,11 @@ export class SupabaseService {
         .select()
 
       if (error) {
-        console.error(`❌ Supabase insert error:`, error)
-        console.error(`❌ Insert data that failed:`, {
-          ...insertData,
-          data: `[${binaryData.length} bytes]` // Don't log the actual binary data
-        })
+
         throw error
       }
 
-      console.log(`✅ Supabase insert successful:`, insertResult)
 
-      console.log(`✅ Saved chart image blob to Supabase: ${imageBlob.filename} (${imageBlob.size_bytes} bytes)`)
       return true
     } catch (error) {
       console.error('❌ Failed to save chart image blob to Supabase:', error)
@@ -724,7 +687,7 @@ export class SupabaseService {
       const userId = await AuthService.getUserId()
       if (!userId) throw new Error('User not authenticated')
 
-      console.log(`🔍 Fetching chart image blob: ${blobId} for user: ${userId}`)
+
 
       // First, get metadata without the binary data to avoid 406 errors
       const { data: metadata, error: metadataError } = await supabase
@@ -737,14 +700,12 @@ export class SupabaseService {
       if (metadataError) {
         if (metadataError.code === 'PGRST116') {
           // No rows returned
-          console.log(`📭 No chart image blob found: ${blobId}`)
           return null
         }
-        console.error(`❌ Metadata fetch error:`, metadataError)
         throw metadataError
       }
 
-      console.log(`📥 Retrieved chart image metadata: ${metadata.filename} (${metadata.size_bytes} bytes)`)
+
 
       // Now get the binary data separately
       const { data: binaryData, error: binaryError } = await supabase
@@ -755,11 +716,11 @@ export class SupabaseService {
         .single()
 
       if (binaryError) {
-        console.error(`❌ Binary data fetch error:`, binaryError)
+
         throw binaryError
       }
 
-      console.log(`📥 Retrieved binary data: ${binaryData.data?.length || 0} bytes`)
+
 
       // Combine metadata and binary data
       const result = {
@@ -767,7 +728,7 @@ export class SupabaseService {
         data: binaryData.data
       }
 
-      console.log(`✅ Successfully retrieved complete chart image blob: ${result.filename}`)
+
       return result
     } catch (error) {
       console.error('❌ Failed to get chart image blob:', error)
@@ -780,7 +741,7 @@ export class SupabaseService {
       const userId = await AuthService.getUserId()
       if (!userId) throw new Error('User not authenticated')
 
-      console.log(`🔍 Fetching all chart image blobs for user: ${userId}`)
+
 
       // Get metadata only (without binary data) for listing
       // Binary data will be fetched individually when needed
@@ -792,7 +753,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`📥 Retrieved ${data.length} chart image blobs metadata from Supabase`)
+
       return data || []
     } catch (error) {
       console.error('❌ Failed to get all chart image blobs:', error)
@@ -805,7 +766,7 @@ export class SupabaseService {
       const userId = await AuthService.getUserId()
       if (!userId) throw new Error('User not authenticated')
 
-      console.log(`🗑️ Deleting chart image blob: ${blobId} for user: ${userId}`)
+
 
       const { error } = await supabase
         .from('chart_image_blobs')
@@ -815,7 +776,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`✅ Chart image blob deleted from Supabase: ${blobId}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to delete chart image blob:', error)
@@ -858,7 +819,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`🗑️ Deleted chart image blobs for trade: ${tradeId}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to delete trade chart image blobs:', error)
@@ -879,7 +840,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`📸 Updated chart image blob trade ID: ${blobId} -> ${newTradeId}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to update chart image blob trade ID:', error)
@@ -973,7 +934,7 @@ export class SupabaseService {
 
       if (error) throw error
 
-      console.log(`✅ Saved commentary data for year ${year}`)
+
       return true
     } catch (error) {
       console.error('❌ Failed to save commentary data to Supabase:', error)
