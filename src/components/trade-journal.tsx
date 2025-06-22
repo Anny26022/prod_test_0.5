@@ -53,6 +53,7 @@ async function fetchMiscData(key: string) {
   try {
     return await DatabaseService.getMiscData(`misc_${key}`);
   } catch (error) {
+    console.error('❌ Error fetching misc data from IndexedDB:', error);
     return null;
   }
 }

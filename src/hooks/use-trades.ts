@@ -45,16 +45,20 @@ async function getTradesFromIndexedDB(): Promise<Trade[]> {
 
   try {
     const trades = await DatabaseService.getAllTrades();
+    console.log(`📊 Loaded ${trades.length} trades from IndexedDB`);
     return trades;
   } catch (error) {
+    console.error('❌ Error loading trades from IndexedDB:', error);
+
     // Try to recover from backup
     try {
       const backup = await DatabaseService.getLatestBackup('trades');
       if (backup && backup.data && Array.isArray(backup.data)) {
+        console.log('🔄 Recovered trades from IndexedDB backup');
         return backup.data;
       }
     } catch (backupError) {
-      // Silent recovery attempt
+      console.error('❌ Failed to recover from IndexedDB backup:', backupError);
     }
 
     return []; // Always return empty array on error to prevent mock data
@@ -64,8 +68,11 @@ async function getTradesFromIndexedDB(): Promise<Trade[]> {
 async function saveTradesToIndexedDB(trades: Trade[]): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
+  console.log(`💾 [saveTradesToIndexedDB] Starting save of ${trades.length} trades...`);
+
   try {
     // Create backup before saving
+    console.log(`💾 [saveTradesToIndexedDB] Creating backup...`);
     await DatabaseService.createBackup('trades', trades, 'Auto-backup before save');
 
     // Convert trades to TradeRecord format with timestamps
@@ -75,19 +82,34 @@ async function saveTradesToIndexedDB(trades: Trade[]): Promise<boolean> {
       updatedAt: new Date()
     }));
 
+    console.log(`💾 [saveTradesToIndexedDB] Saving to database...`);
     const success = await DatabaseService.saveAllTrades(tradesWithTimestamps);
+
+    if (success) {
+      console.log(`✅ [saveTradesToIndexedDB] Successfully saved ${trades.length} trades to IndexedDB`);
+
+      // Verify the save by reading back
+      const savedTrades = await DatabaseService.getAllTrades();
+      console.log(`✅ [saveTradesToIndexedDB] Verification: ${savedTrades.length} trades found in database`);
+    } else {
+      console.error(`❌ [saveTradesToIndexedDB] Save operation returned false`);
+    }
+
     return success;
   } catch (error) {
+    console.error('❌ [saveTradesToIndexedDB] IndexedDB save error:', error);
+
     // IndexedDB doesn't have quota issues like localStorage, but handle other errors
     try {
       // Try to restore from backup if save failed
       const backup = await DatabaseService.getLatestBackup('trades');
       if (backup && backup.data) {
         await DatabaseService.saveAllTrades(backup.data);
+        console.log('🔄 Restored trades from IndexedDB backup');
         return true;
       }
     } catch (restoreError) {
-      // Silent restore attempt
+      console.error('❌ Failed to restore from IndexedDB backup:', restoreError);
     }
 
     return false;
@@ -100,6 +122,7 @@ async function getTradeSettings() {
     const settings = await DatabaseService.getTradeSettings();
     return settings;
   } catch (error) {
+    console.error('❌ Error fetching trade settings from IndexedDB:', error);
     return null;
   }
 }
@@ -109,6 +132,7 @@ async function saveTradeSettings(settings: any): Promise<boolean> {
   try {
     return await DatabaseService.saveTradeSettings(settings);
   } catch (error) {
+    console.error('❌ IndexedDB save error for settings:', error);
     return false;
   }
 }
@@ -116,8 +140,16 @@ async function saveTradeSettings(settings: any): Promise<boolean> {
 async function clearAllTradeAndSettingsData(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
+    console.log('🗑️ Starting comprehensive IndexedDB clearing...');
+
     // Clear all IndexedDB data
     const success = await DatabaseService.clearAllData();
+
+    if (success) {
+      console.log('✅ Cleared all IndexedDB data');
+    } else {
+      console.error('❌ Failed to clear IndexedDB data');
+    }
 
     // Also clear any remaining localStorage data for legacy cleanup
     const keysToRemove = [];
@@ -158,12 +190,15 @@ async function clearAllTradeAndSettingsData(): Promise<boolean> {
     // Clear sessionStorage as well
     try {
       sessionStorage.clear();
+      console.log('🗑️ Cleared all sessionStorage');
     } catch (error) {
-      // Silent cleanup
+      console.error('❌ Failed to clear sessionStorage:', error);
     }
 
+    console.log('✅ Comprehensive data clearing completed');
     return success;
   } catch (error) {
+    console.error('💥 Error clearing all trade and settings data:', error);
     return false;
   }
 }

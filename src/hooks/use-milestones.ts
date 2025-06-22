@@ -98,7 +98,9 @@ export const useMilestones = () => {
   // Save milestones to IndexedDB
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
-      DatabaseService.saveMilestonesData(achievedMilestones);
+      DatabaseService.saveMilestonesData(achievedMilestones).then(success => {
+        console.log(`🏆 [useMilestones] Milestones save ${success ? 'successful' : 'failed'}`);
+      });
     }
   }, [achievedMilestones, isLoading]);
 
