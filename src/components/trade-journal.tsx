@@ -3223,6 +3223,7 @@ export const TradeJournal = React.memo(function TradeJournal({
             onSave={handleAddTrade}
             mode="add"
             symbol={searchQuery} // Pass the search query as the initial symbol
+            onChartRefresh={() => setChartRefreshTrigger(prev => prev + 1)}
           />
         )}
 
@@ -3238,6 +3239,7 @@ export const TradeJournal = React.memo(function TradeJournal({
               symbol={selectedTrade?.name || ''}
               isUploadOnlyMode={isUploadOnlyMode}
               isActionsEditMode={isActionsEditMode}
+              onChartRefresh={() => setChartRefreshTrigger(prev => prev + 1)}
             />
 
             <DeleteConfirmModal

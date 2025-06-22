@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Tooltip, Select, SelectItem, Chip, Progress, Input } from '@heroui/react';
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Tooltip, Select, SelectItem, Chip, Progress, Input, DatePicker } from '@heroui/react';
 import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChartImage } from '../types/trade';
@@ -21,9 +21,19 @@ interface ChartImageWithContext extends ChartImageBlob {
   tradeDate?: string;
   tradeNo?: number;
   dataUrl?: string;
+  // Additional trade context for filtering
+  plRs?: number;
+  setup?: string;
+  positionStatus?: 'Open' | 'Closed' | 'Partial';
 }
 
 type FilterType = 'all' | 'beforeEntry' | 'afterExit';
+type OutcomeFilter = 'all' | 'win' | 'loss' | 'breakeven';
+
+interface DateRange {
+  start: string | null;
+  end: string | null;
+}
 
 export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
   isOpen,
@@ -37,6 +47,12 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [outcomeFilter, setOutcomeFilter] = useState<OutcomeFilter>('all');
+  const [setupFilter, setSetupFilter] = useState<string>('all');
+  const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
+  const [showFilters, setShowFilters] = useState(false);
+  const [showHeader, setShowHeader] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -46,19 +62,91 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
   const [symbolSearch, setSymbolSearch] = useState('');
   const [showSymbolDropdown, setShowSymbolDropdown] = useState(false);
 
+  // Setup options (same as in trade modal)
+  const SETUP_OPTIONS = [
+    'ITB', 'Chop BO', 'IPO Base', '3/5/8', '21/50', 'Breakout', 'Pullback',
+    'Reversal', 'Continuation', 'Gap Fill', 'OTB', 'Stage 2', 'ONP BO',
+    'EP', 'Pivot Bo', 'Cheat', 'Flag', 'Other'
+  ];
+
   // Get unique symbols for search
   const uniqueSymbols = useMemo(() => {
     const symbols = new Set(allImages.map(img => img.tradeName).filter(Boolean));
     return Array.from(symbols).sort();
   }, [allImages]);
 
-  // Filter images based on current filter and symbol search
+  // Get unique setups from the data
+  const uniqueSetups = useMemo(() => {
+    const setups = Array.from(new Set(allImages.map(img => img.setup).filter(Boolean)));
+    return setups.sort();
+  }, [allImages]);
+
+  // Get filtered symbols for dropdown
+  const filteredSymbols = useMemo(() => {
+    if (!symbolSearch) return uniqueSymbols.slice(0, 10);
+    return uniqueSymbols
+      .filter(symbol => symbol.toLowerCase().includes(symbolSearch.toLowerCase()))
+      .slice(0, 10);
+  }, [uniqueSymbols, symbolSearch]);
+
+  // Helper function to determine trade outcome
+  const getTradeOutcome = (plRs: number | undefined, positionStatus: string | undefined): OutcomeFilter => {
+    if (plRs === undefined || positionStatus === 'Open') return 'breakeven';
+    if (plRs > 0) return 'win';
+    if (plRs < 0) return 'loss';
+    return 'breakeven';
+  };
+
+  // Check if any filters are active
+  const hasActiveFilters = useMemo(() => {
+    return filter !== 'all' ||
+           outcomeFilter !== 'all' ||
+           setupFilter !== 'all' ||
+           dateRange.start ||
+           dateRange.end ||
+           symbolSearch.length > 0;
+  }, [filter, outcomeFilter, setupFilter, dateRange, symbolSearch]);
+
+  // Filter images based on all active filters
   const filteredImages = useMemo(() => {
     let images = allImages;
 
-    // Apply type filter
+    // Apply chart type filter (beforeEntry/afterExit)
     if (filter !== 'all') {
       images = images.filter(img => img.imageType === filter);
+    }
+
+    // Apply outcome filter (win/loss/breakeven)
+    if (outcomeFilter !== 'all') {
+      images = images.filter(img => {
+        const outcome = getTradeOutcome(img.plRs, img.positionStatus);
+        return outcome === outcomeFilter;
+      });
+    }
+
+    // Apply setup filter
+    if (setupFilter !== 'all') {
+      images = images.filter(img => img.setup === setupFilter);
+    }
+
+    // Apply date range filter
+    if (dateRange.start || dateRange.end) {
+      images = images.filter(img => {
+        if (!img.tradeDate) return false;
+        const tradeDate = new Date(img.tradeDate);
+
+        if (dateRange.start) {
+          const startDate = new Date(dateRange.start);
+          if (tradeDate < startDate) return false;
+        }
+
+        if (dateRange.end) {
+          const endDate = new Date(dateRange.end);
+          if (tradeDate > endDate) return false;
+        }
+
+        return true;
+      });
     }
 
     // Apply symbol search
@@ -69,15 +157,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
     }
 
     return images;
-  }, [allImages, filter, symbolSearch]);
-
-  // Get filtered symbols for dropdown
-  const filteredSymbols = useMemo(() => {
-    if (!symbolSearch) return uniqueSymbols.slice(0, 10);
-    return uniqueSymbols
-      .filter(symbol => symbol.toLowerCase().includes(symbolSearch.toLowerCase()))
-      .slice(0, 10);
-  }, [uniqueSymbols, symbolSearch]);
+  }, [allImages, filter, outcomeFilter, setupFilter, dateRange, symbolSearch, getTradeOutcome]);
 
   const currentImage = filteredImages[currentIndex];
 
@@ -95,6 +175,8 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
       setPreloadedImages(new Map());
       setZoom(1);
       setPosition({ x: 0, y: 0 });
+      // Reset current index when closing
+      setCurrentIndex(0);
     }
   }, [isOpen, refreshTrigger]); // Add refreshTrigger to dependencies
 
@@ -112,23 +194,6 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
   useEffect(() => {
     setCurrentIndex(0);
   }, [filter, symbolSearch]);
-
-  // Handle symbol selection
-  const handleSymbolSelect = (symbol: string) => {
-    setSymbolSearch(symbol);
-    setShowSymbolDropdown(false);
-    // Find first image for this symbol
-    const symbolIndex = filteredImages.findIndex(img => img.tradeName === symbol);
-    if (symbolIndex >= 0) {
-      setCurrentIndex(symbolIndex);
-    }
-  };
-
-  // Handle symbol search input
-  const handleSymbolSearchChange = (value: string) => {
-    setSymbolSearch(value);
-    setShowSymbolDropdown(value.length > 0);
-  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -155,6 +220,38 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
           break;
         case '0':
           setFilter('all');
+          break;
+        case 'w':
+          setOutcomeFilter('win');
+          break;
+        case 'l':
+          setOutcomeFilter('loss');
+          break;
+        case 'b':
+          setOutcomeFilter('breakeven');
+          break;
+        case 'c':
+          // Clear all filters
+          setFilter('all');
+          setOutcomeFilter('all');
+          setSetupFilter('all');
+          setDateRange({ start: null, end: null });
+          setSymbolSearch('');
+          break;
+        case 'f':
+          // Toggle filter panel
+          setShowFilters(!showFilters);
+          break;
+        case 'F11':
+        case 'F':
+          // Toggle fullscreen
+          e.preventDefault();
+          toggleFullscreen();
+          break;
+        case 'h':
+        case 'H':
+          // Toggle header visibility
+          setShowHeader(!showHeader);
           break;
       }
     };
@@ -210,7 +307,11 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                   tradeName: trade.name,
                   tradeDate: trade.date,
                   tradeNo: trade.tradeNo ? Number(trade.tradeNo) : 0,
-                  dataUrl
+                  dataUrl,
+                  // Additional trade context for filtering
+                  plRs: trade.plRs,
+                  setup: trade.setup,
+                  positionStatus: trade.positionStatus
                 };
 
                 imagesWithDataUrls.push(imageWithContext);
@@ -243,7 +344,11 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                   tradeName: trade.name,
                   tradeDate: trade.date,
                   tradeNo: trade.tradeNo ? Number(trade.tradeNo) : 0,
-                  dataUrl
+                  dataUrl,
+                  // Additional trade context for filtering
+                  plRs: trade.plRs,
+                  setup: trade.setup,
+                  positionStatus: trade.positionStatus
                 };
 
                 imagesWithDataUrls.push(imageWithContext);
@@ -367,6 +472,36 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
     setIsDragging(false);
   };
 
+  const toggleFullscreen = async () => {
+    try {
+      if (!isFullscreen) {
+        // Enter fullscreen
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen();
+        }
+        setIsFullscreen(true);
+      } else {
+        // Exit fullscreen
+        if (document.exitFullscreen) {
+          await document.exitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    } catch (error) {
+      console.error('Fullscreen error:', error);
+    }
+  };
+
+  // Listen for fullscreen changes
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
   const downloadCurrentImage = () => {
     if (currentImage?.dataUrl) {
       const link = document.createElement('a');
@@ -386,6 +521,22 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
     return type === 'beforeEntry' ? 'lucide:trending-up' : 'lucide:trending-down';
   };
 
+  // Symbol search helper functions
+  const handleSymbolSearchChange = (value: string) => {
+    setSymbolSearch(value);
+    setShowSymbolDropdown(value.length > 0);
+  };
+
+  const handleSymbolSelect = (symbol: string) => {
+    setSymbolSearch(symbol);
+    setShowSymbolDropdown(false);
+    // Find first image for this symbol
+    const symbolIndex = filteredImages.findIndex(img => img.tradeName === symbol);
+    if (symbolIndex >= 0) {
+      setCurrentIndex(symbolIndex);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -403,194 +554,305 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
       <ModalContent>
         {(onClose) => (
           <>
-            <ModalHeader className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 px-4 py-3">
-              <div className="flex items-center gap-4">
-
-                {/* Compact Symbol Search */}
-                <div className="relative">
-                  <Input
-                    size="md"
-                    placeholder="Search..."
-                    value={symbolSearch}
-                    onChange={(e) => handleSymbolSearchChange(e.target.value)}
-                    onFocus={() => setShowSymbolDropdown(symbolSearch.length > 0)}
-                    onBlur={() => setTimeout(() => setShowSymbolDropdown(false), 200)}
-                    className="w-40"
-                    classNames={{
-                      input: "text-sm",
-                      inputWrapper: "h-8 min-h-8"
-                    }}
-                    startContent={<Icon icon="lucide:search" className="w-4 h-4 text-gray-400" />}
-                    endContent={
-                      symbolSearch && (
-                        <Button
-                          isIconOnly
-                          size="sm"
-                          variant="light"
-                          onPress={() => {
-                            setSymbolSearch('');
-                            setShowSymbolDropdown(false);
-                          }}
-                          className="w-4 h-4 min-w-4"
-                          aria-label="Clear search"
-                        >
-                          <Icon icon="lucide:x" className="w-3 h-3" />
-                        </Button>
-                      )
-                    }
-                  />
-
-                  {/* Symbol Dropdown */}
-                  {showSymbolDropdown && filteredSymbols.length > 0 && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-32 overflow-y-auto">
-                      {filteredSymbols.map((symbol) => (
-                        <div
-                          key={symbol}
-                          className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm"
-                          onMouseDown={() => handleSymbolSelect(symbol)}
-                        >
-                          {symbol}
-                        </div>
-                      ))}
-                    </div>
+            {/* Collapsible Header */}
+            <AnimatePresence>
+              {showHeader && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <ModalHeader className="border-b border-gray-200 dark:border-gray-700 px-6 py-3">
+              {/* Main Header Row */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  {/* Current Symbol Only */}
+                  {currentImage && (
+                    <span className="text-lg font-semibold text-gray-700 dark:text-gray-300">
+                      {currentImage.tradeName}
+                    </span>
                   )}
                 </div>
 
-                {/* Compact Current Image Info */}
-                {currentImage && (
-                  <div className="flex items-center gap-3">
-                    <Chip
-                      size="md"
-                      color={currentImage.imageType === 'beforeEntry' ? 'success' : 'warning'}
-                      className="text-sm h-6 px-3"
-                    >
-                      {getImageTypeLabel(currentImage.imageType)}
-                    </Chip>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      {currentImage.tradeName}
-                    </span>
+                <div className="flex items-center gap-2">
+                  {/* Search */}
+                  <div className="relative">
+                    <Input
+                      size="sm"
+                      placeholder="Search..."
+                      value={symbolSearch}
+                      onChange={(e) => handleSymbolSearchChange(e.target.value)}
+                      onFocus={() => setShowSymbolDropdown(symbolSearch.length > 0)}
+                      onBlur={() => setTimeout(() => setShowSymbolDropdown(false), 200)}
+                      className="w-28"
+                      classNames={{
+                        input: "text-xs",
+                        inputWrapper: "h-7 min-h-7"
+                      }}
+                      startContent={<Icon icon="lucide:search" className="w-3 h-3 text-gray-400" />}
+                    />
+
+                    {/* Symbol Dropdown */}
+                    {showSymbolDropdown && filteredSymbols.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50 max-h-32 overflow-y-auto">
+                        {filteredSymbols.map((symbol) => (
+                          <div
+                            key={symbol}
+                            className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm"
+                            onMouseDown={() => handleSymbolSelect(symbol)}
+                          >
+                            {symbol}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* Filter Controls */}
-                <Select
-                  size="md"
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value as FilterType)}
-                  className="w-28"
-                  classNames={{
-                    trigger: "h-8 min-h-8",
-                    value: "text-sm"
-                  }}
-                  placeholder="Filter"
-                  aria-label="Filter charts"
-                >
-                  <SelectItem key="all" value="all">All</SelectItem>
-                  <SelectItem key="beforeEntry" value="beforeEntry">Entry</SelectItem>
-                  <SelectItem key="afterExit" value="afterExit">Exit</SelectItem>
-                </Select>
-
-                {/* Navigation Counter */}
-                <div className="text-sm font-medium text-gray-600 dark:text-gray-400 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded text-center min-w-[3rem]">
-                  {filteredImages.length > 0 ? `${currentIndex + 1}/${filteredImages.length}` : '0/0'}
-                </div>
-
-                {/* Navigation Controls */}
-                <div className="flex items-center">
+                  {/* Filter */}
                   <Button
                     isIconOnly
                     variant="light"
-                    size="md"
+                    onPress={() => setShowFilters(!showFilters)}
+                    className="w-7 h-7 min-w-7 relative"
+                  >
+                    <Icon icon="lucide:filter" className="w-3 h-3" />
+                    {hasActiveFilters && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-3 h-3 flex items-center justify-center text-[10px]">
+                        {[filter !== 'all', outcomeFilter !== 'all', setupFilter !== 'all', dateRange.start, dateRange.end, symbolSearch].filter(Boolean).length}
+                      </span>
+                    )}
+                  </Button>
+
+                  {/* Counter */}
+                  <div className="text-sm font-medium text-gray-600 dark:text-gray-400 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded text-center min-w-[2.5rem]">
+                    {filteredImages.length > 0 ? `${currentIndex + 1}/${filteredImages.length}` : '0/0'}
+                  </div>
+
+                  {/* Navigation */}
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
                     onPress={navigatePrevious}
                     isDisabled={currentIndex <= 0}
-                    className="w-8 h-8 min-w-8"
-                    aria-label="Previous image"
+                    className="w-7 h-7 min-w-7"
                   >
-                    <Icon icon="lucide:chevron-left" className="w-4 h-4" />
+                    <Icon icon="lucide:chevron-left" className="w-3 h-3" />
                   </Button>
-
                   <Button
                     isIconOnly
                     variant="light"
-                    size="md"
+                    size="sm"
                     onPress={navigateNext}
                     isDisabled={currentIndex >= filteredImages.length - 1}
-                    className="w-8 h-8 min-w-8"
-                    aria-label="Next image"
+                    className="w-7 h-7 min-w-7"
                   >
-                    <Icon icon="lucide:chevron-right" className="w-4 h-4" />
+                    <Icon icon="lucide:chevron-right" className="w-3 h-3" />
                   </Button>
-                </div>
 
-                {/* Zoom Controls */}
-                <div className="flex items-center bg-gray-100 dark:bg-gray-800 rounded px-2">
+                  {/* Zoom */}
                   <Button
                     isIconOnly
                     variant="light"
-                    size="md"
+                    size="sm"
                     onPress={handleZoomOut}
                     isDisabled={zoom <= 0.5}
                     className="w-7 h-7 min-w-7"
-                    aria-label="Zoom out"
                   >
                     <Icon icon="lucide:zoom-out" className="w-4 h-4" />
                   </Button>
-
-                  <span className="text-sm font-mono px-2 min-w-[2.5rem] text-center">
+                  <div className="text-sm font-mono px-1 min-w-[2rem] text-center text-gray-600 dark:text-gray-400">
                     {Math.round(zoom * 100)}%
-                  </span>
-
+                  </div>
                   <Button
                     isIconOnly
                     variant="light"
-                    size="md"
+                    size="sm"
                     onPress={handleZoomIn}
                     isDisabled={zoom >= 5}
                     className="w-7 h-7 min-w-7"
-                    aria-label="Zoom in"
                   >
                     <Icon icon="lucide:zoom-in" className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
+                    onPress={toggleFullscreen}
+                    className="w-7 h-7 min-w-7"
+                  >
+                    <Icon icon={isFullscreen ? "lucide:minimize" : "lucide:maximize"} className="w-4 h-4" />
+                  </Button>
+
+                  {/* Actions */}
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
+                    onPress={downloadCurrentImage}
+                    isDisabled={!currentImage?.dataUrl}
+                    className="w-7 h-7 min-w-7"
+                  >
+                    <Icon icon="lucide:download" className="w-4 h-4" />
                   </Button>
 
                   <Button
                     isIconOnly
                     variant="light"
-                    size="md"
-                    onPress={resetZoom}
+                    size="sm"
+                    onPress={() => setShowHeader(false)}
                     className="w-7 h-7 min-w-7"
-                    aria-label="Reset zoom"
                   >
-                    <Icon icon="lucide:maximize" className="w-4 h-4" />
+                    <Icon icon="lucide:chevron-up" className="w-3 h-3" />
+                  </Button>
+
+                  <Button
+                    isIconOnly
+                    variant="light"
+                    size="sm"
+                    onPress={onClose}
+                    className="w-7 h-7 min-w-7"
+                  >
+                    <Icon icon="lucide:x" className="w-3 h-3" />
                   </Button>
                 </div>
+              </div>
 
-                {/* Action Buttons */}
+              {/* Collapsible Filter Panel */}
+              <AnimatePresence>
+                {showFilters && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="border-t border-gray-200 dark:border-gray-700 pt-2 mt-2 overflow-hidden"
+                  >
+                    <div className="flex justify-end flex-wrap gap-2 mr-8">
+                      {/* Chart Type */}
+                      <Select
+                        size="sm"
+                        value={filter}
+                        onChange={(e) => setFilter(e.target.value as FilterType)}
+                        className="w-24"
+                        classNames={{
+                          trigger: "h-7 min-h-7",
+                          value: "text-xs"
+                        }}
+                        placeholder="Type"
+                      >
+                        <SelectItem key="all" value="all">All</SelectItem>
+                        <SelectItem key="beforeEntry" value="beforeEntry">Entry</SelectItem>
+                        <SelectItem key="afterExit" value="afterExit">Exit</SelectItem>
+                      </Select>
+
+                      {/* Outcome */}
+                      <Select
+                        size="sm"
+                        value={outcomeFilter}
+                        onChange={(e) => setOutcomeFilter(e.target.value as OutcomeFilter)}
+                        className="w-28"
+                        classNames={{
+                          trigger: "h-7 min-h-7",
+                          value: "text-xs"
+                        }}
+                        placeholder="Outcome"
+                      >
+                        <SelectItem key="all" value="all">All</SelectItem>
+                        <SelectItem key="win" value="win">Win</SelectItem>
+                        <SelectItem key="loss" value="loss">Loss</SelectItem>
+                        <SelectItem key="breakeven" value="breakeven">Breakeven</SelectItem>
+                      </Select>
+
+                      {/* Setup */}
+                      <Select
+                        size="sm"
+                        value={setupFilter}
+                        onChange={(e) => setSetupFilter(e.target.value)}
+                        className="w-28"
+                        classNames={{
+                          trigger: "h-7 min-h-7",
+                          value: "text-xs"
+                        }}
+                        placeholder="Setup"
+                      >
+                        <SelectItem key="all" value="all">All</SelectItem>
+                        {uniqueSetups.map((setup) => (
+                          <SelectItem key={setup} value={setup}>{setup}</SelectItem>
+                        ))}
+                      </Select>
+
+                      {/* From Date */}
+                      <Input
+                        type="date"
+                        size="sm"
+                        value={dateRange.start || ''}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value || null }))}
+                        className="w-32"
+                        classNames={{
+                          input: "text-xs",
+                          inputWrapper: "h-7 min-h-7"
+                        }}
+                        placeholder="From"
+                      />
+
+                      {/* To Date */}
+                      <Input
+                        type="date"
+                        size="sm"
+                        value={dateRange.end || ''}
+                        onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value || null }))}
+                        className="w-32"
+                        classNames={{
+                          input: "text-xs",
+                          inputWrapper: "h-7 min-h-7"
+                        }}
+                        placeholder="To"
+                      />
+
+                      {/* Clear */}
+                      <Button
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => {
+                          setFilter('all');
+                          setOutcomeFilter('all');
+                          setSetupFilter('all');
+                          setDateRange({ start: null, end: null });
+                          setSymbolSearch('');
+                        }}
+                        className="h-7 text-xs"
+                        startContent={<Icon icon="lucide:x" className="w-3 h-3" />}
+                        isDisabled={!hasActiveFilters}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </ModalHeader>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Collapsed Header Toggle */}
+            {!showHeader && (
+              <div className="absolute top-2 right-2 z-50">
                 <Button
                   isIconOnly
-                  variant="light"
-                  size="md"
-                  onPress={downloadCurrentImage}
-                  isDisabled={!currentImage?.dataUrl}
-                  className="w-8 h-8 min-w-8"
-                  aria-label="Download image"
+                  variant="flat"
+                  size="sm"
+                  onPress={() => setShowHeader(true)}
+                  className="w-8 h-8 bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm"
+                  aria-label="Show header"
                 >
-                  <Icon icon="lucide:download" className="w-4 h-4" />
-                </Button>
-
-                <Button
-                  isIconOnly
-                  variant="light"
-                  size="md"
-                  onPress={onClose}
-                  className="w-8 h-8 min-w-8"
-                  aria-label="Close viewer"
-                >
-                  <Icon icon="lucide:x" className="w-4 h-4" />
+                  <Icon icon="lucide:chevron-down" className="w-4 h-4" />
                 </Button>
               </div>
-            </ModalHeader>
+            )}
 
             <ModalBody className="p-0 overflow-hidden">
               {isLoading ? (
@@ -698,26 +960,30 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
               ) : null}
             </ModalBody>
 
-            <ModalFooter className="border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+            <ModalFooter className="border-t border-gray-200 dark:border-gray-700 px-4 py-2">
               <div className="flex justify-between items-center w-full">
-                <div className="text-sm text-gray-500">
-                  <span>← → keys to navigate</span>
-                  {zoom > 1 && <span> • Drag to pan</span>}
+                <div className="text-xs text-gray-500 flex gap-3">
+                  <span>← → navigate</span>
+                  <span>H header</span>
+                  <span>F filters</span>
+                  <span>F11 fullscreen</span>
+                  {zoom > 1 && <span>• Drag to pan</span>}
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                   {currentImage && currentImage.tradeDate && (
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-xs text-gray-500">
                       {new Date(currentImage.tradeDate).toLocaleDateString()}
                     </span>
                   )}
                   <Button
-                    color="primary"
-                    size="md"
+                    isIconOnly
+                    variant="light"
+                    size="sm"
                     onPress={onClose}
-                    className="h-8 text-sm"
+                    className="w-7 h-7 min-w-7"
                   >
-                    Close
+                    <Icon icon="lucide:x" className="w-4 h-4" />
                   </Button>
                 </div>
               </div>

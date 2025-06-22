@@ -75,6 +75,7 @@ import * as Papa from "papaparse"; // Centralized import
     symbol?: string;
     isUploadOnlyMode?: boolean;
     isActionsEditMode?: boolean; // New prop for actions tab edit mode
+    onChartRefresh?: () => void; // Callback to refresh chart viewer
   }
 
   type TradeModalFormData = Trade & { slPercent: number };
@@ -240,6 +241,7 @@ import * as Papa from "papaparse"; // Centralized import
     symbol: initialSymbol = "",
     isUploadOnlyMode = false,
     isActionsEditMode = false,
+    onChartRefresh,
   }) => {
 
 
@@ -645,6 +647,7 @@ import * as Papa from "papaparse"; // Centralized import
 
     // Trigger chart refresh for Universal Chart Viewer
     setChartRefreshTrigger(prev => prev + 1);
+    onChartRefresh?.(); // Also trigger parent refresh
     console.log('🔄 Chart uploaded, triggering Universal Chart Viewer refresh');
 
     // Track upload method for consistency
@@ -703,6 +706,7 @@ import * as Papa from "papaparse"; // Centralized import
 
     // Trigger chart refresh for Universal Chart Viewer
     setChartRefreshTrigger(prev => prev + 1);
+    onChartRefresh?.(); // Also trigger parent refresh
     console.log('🔄 Chart deleted, triggering Universal Chart Viewer refresh');
 
     // CRITICAL FIX: Always update the trade in the database immediately when deleting charts

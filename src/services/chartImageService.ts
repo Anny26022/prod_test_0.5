@@ -276,6 +276,7 @@ export class ChartImageService {
       if (chartImage.blobId) {
         const isAuthenticated = await AuthService.isAuthenticated();
         if (!isAuthenticated) {
+          console.warn('🔐 User not authenticated, cannot load chart image from Supabase');
           return null;
         }
 
@@ -401,9 +402,11 @@ export class ChartImageService {
               return null;
             }
           } else {
+            console.warn(`📷 Chart image blob not found in Supabase: ${chartImage.blobId}`);
             return null;
           }
         } catch (error) {
+          console.error(`❌ Error loading chart image from Supabase:`, error);
           return null;
         }
       }
