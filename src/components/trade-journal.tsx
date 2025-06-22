@@ -46,21 +46,20 @@ import { useAccountingCalculations } from "../hooks/use-accounting-calculations"
 import { formatCurrency as standardFormatCurrency, formatDate as standardFormatDate } from "../utils/formatters";
 // Removed Supabase import - using localStorage only
 
-// IndexedDB helpers for misc data using Dexie
-import { DatabaseService } from '../db/database';
+// Supabase helpers for misc data
+import { SupabaseService } from '../services/supabaseService';
 
 async function fetchMiscData(key: string) {
   try {
-    return await DatabaseService.getMiscData(`misc_${key}`);
+    return await SupabaseService.getMiscData(`misc_${key}`);
   } catch (error) {
-    console.error('❌ Error fetching misc data from IndexedDB:', error);
     return null;
   }
 }
 
 async function saveMiscData(key: string, value: any): Promise<boolean> {
   try {
-    return await DatabaseService.saveMiscData(`misc_${key}`, value);
+    return await SupabaseService.saveMiscData(`misc_${key}`, value);
   } catch (error) {
     return false;
   }

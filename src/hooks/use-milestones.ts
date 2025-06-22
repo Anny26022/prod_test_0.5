@@ -3,7 +3,7 @@ import { ALL_MILESTONES, Milestone } from '../utils/milestones';
 import { useTrades } from './use-trades';
 import { useTruePortfolio } from '../utils/TruePortfolioContext';
 import { useAccountingMethod } from '../context/AccountingMethodContext';
-import { DatabaseService } from '../db/database';
+import { SupabaseService } from '../services/supabaseService';
 
 interface AchievedMilestone extends Milestone {
   achievedAt: string; // ISO date string
@@ -30,12 +30,12 @@ export const useMilestones = () => {
       }
 
       try {
-        const milestonesRecord = await DatabaseService.getMilestonesData();
+        const milestonesRecord = await SupabaseService.getMilestonesData();
         if (milestonesRecord && milestonesRecord.achievements) {
           setAchievedMilestones(milestonesRecord.achievements);
         }
       } catch (error) {
-        console.error('❌ Error loading achieved milestones from IndexedDB:', error);
+        console.error('❌ Error loading achieved milestones from Supabase:', error);
       } finally {
         setIsLoading(false);
       }
@@ -95,12 +95,10 @@ export const useMilestones = () => {
     return () => clearTimeout(timeoutId);
   }, [checkAndAwardMilestones]); // Re-run when dependencies change
 
-  // Save milestones to IndexedDB
+  // Save milestones to Supabase
   useEffect(() => {
     if (!isLoading && typeof window !== 'undefined') {
-      DatabaseService.saveMilestonesData(achievedMilestones).then(success => {
-        console.log(`🏆 [useMilestones] Milestones save ${success ? 'successful' : 'failed'}`);
-      });
+      SupabaseService.saveMilestonesData(achievedMilestones);
     }
   }, [achievedMilestones, isLoading]);
 

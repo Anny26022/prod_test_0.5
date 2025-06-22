@@ -1,5 +1,7 @@
 import { ChartImage, ChartImageBlob, TradeChartAttachments } from '../types/trade';
 import { DatabaseService } from '../db/database';
+import { SupabaseService } from './supabaseService';
+import { AuthService } from './authService';
 import { createChartImage, CHART_IMAGE_CONFIG, getImageDataUrl } from '../utils/chartImageUtils';
 import { generateId } from '../utils/helpers';
 
@@ -34,10 +36,44 @@ export class ChartImageService {
           compressed: chartImage.compressed || false,
           originalSize: chartImage.originalSize,
         };
-        
+
+        // Save to IndexedDB (local storage)
         const blobSaved = await DatabaseService.saveChartImageBlob(imageBlob);
         if (!blobSaved) {
-          return { success: false, error: 'Failed to save image blob to database' };
+          return { success: false, error: 'Failed to save image blob to local database' };
+        }
+
+        // Save to Supabase (cloud storage) if user is authenticated
+        const isAuthenticated = await AuthService.isAuthenticated();
+        if (isAuthenticated) {
+          try {
+            // Convert blob data to base64 for Supabase storage
+            const arrayBuffer = await imageBlob.data.arrayBuffer();
+            const base64Data = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+            const supabaseImageBlob = {
+              id: imageBlob.id,
+              trade_id: imageBlob.tradeId,
+              image_type: imageBlob.imageType,
+              filename: imageBlob.filename,
+              mime_type: imageBlob.mimeType,
+              size_bytes: imageBlob.size,
+              data: base64Data,
+              uploaded_at: imageBlob.uploadedAt.toISOString(),
+              compressed: imageBlob.compressed,
+              original_size: imageBlob.originalSize
+            };
+
+            const supabaseSaved = await SupabaseService.saveChartImageBlob(supabaseImageBlob);
+            if (supabaseSaved) {
+              console.log(`☁️ Chart image also saved to Supabase: ${imageBlob.filename}`);
+            } else {
+              console.warn(`⚠️ Failed to save chart image to Supabase: ${imageBlob.filename}`);
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to save chart image to Supabase:`, error);
+            // Don't fail the entire operation if Supabase save fails
+          }
         }
       }
       
@@ -58,14 +94,55 @@ export class ChartImageService {
       if (chartImage.storage === 'inline') {
         return getImageDataUrl(chartImage);
       }
-      
+
       if (chartImage.storage === 'blob' && chartImage.blobId) {
-        const blob = await DatabaseService.getChartImageBlob(chartImage.blobId);
+        // First try to get from local IndexedDB
+        let blob = await DatabaseService.getChartImageBlob(chartImage.blobId);
+
+        // If not found locally and user is authenticated, try Supabase
+        if (!blob) {
+          const isAuthenticated = await AuthService.isAuthenticated();
+          if (isAuthenticated) {
+            try {
+              const supabaseBlob = await SupabaseService.getChartImageBlob(chartImage.blobId);
+              if (supabaseBlob) {
+                // Convert base64 back to blob
+                const binaryString = atob(supabaseBlob.data);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) {
+                  bytes[i] = binaryString.charCodeAt(i);
+                }
+                const blobData = new Blob([bytes], { type: supabaseBlob.mime_type });
+
+                // Save to local IndexedDB for future use
+                const localImageBlob: ChartImageBlob = {
+                  id: supabaseBlob.id,
+                  tradeId: supabaseBlob.trade_id,
+                  imageType: supabaseBlob.image_type,
+                  filename: supabaseBlob.filename,
+                  mimeType: supabaseBlob.mime_type,
+                  size: supabaseBlob.size_bytes,
+                  data: blobData,
+                  uploadedAt: new Date(supabaseBlob.uploaded_at),
+                  compressed: supabaseBlob.compressed,
+                  originalSize: supabaseBlob.original_size
+                };
+
+                await DatabaseService.saveChartImageBlob(localImageBlob);
+                blob = localImageBlob;
+                console.log(`📥 Retrieved chart image from Supabase: ${supabaseBlob.filename}`);
+              }
+            } catch (error) {
+              console.warn(`⚠️ Failed to retrieve chart image from Supabase:`, error);
+            }
+          }
+        }
+
         if (blob) {
           return URL.createObjectURL(blob.data);
         }
       }
-      
+
       return null;
     } catch (error) {
       console.error('❌ Failed to get chart image data URL:', error);

@@ -108,7 +108,6 @@ export const GlobalFilterBar: React.FC = () => {
             window.location.reload();
 
           } catch (error) {
-            console.error('💥 Error during data clearing:', error);
             alert('❌ An error occurred while clearing data. Please try again or refresh the page manually.');
           }
         } else {

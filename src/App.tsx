@@ -20,34 +20,72 @@ import { AnimatedBrandName } from './components/AnimatedBrandName';
 import DeepAnalyticsPage from "./pages/DeepAnalyticsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Analytics } from '@vercel/analytics/react';
-import { DatabaseService } from "./db/database";
-// Migrated from localStorage to IndexedDB using Dexie
 
-export default function App() {
+// Authentication and Migration
+import { AuthProvider, useAuth, useUser } from "./context/AuthContext";
+import { AuthGuard } from "./components/auth/AuthGuard";
+import { MigrationModal } from "./components/migration/MigrationModal";
+import { MigrationService } from "./services/migrationService";
+import { SupabaseService } from "./services/supabaseService";
+import { DatabaseService } from "./db/database";
+import { AuthDebug } from "./components/debug/AuthDebug";
+import { AuthModal } from "./components/auth/AuthModal";
+import { AuthCallback } from "./pages/AuthCallback";
+// Migrated from IndexedDB to Supabase with authentication
+
+// Main App Content Component (authenticated users only)
+function AppContent() {
   const location = useLocation();
   const { theme } = useTheme();
+  const { user, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const [userName, setUserName] = React.useState('');
   const [loadingPrefs, setLoadingPrefs] = React.useState(true);
   const [isFullWidthEnabled, setIsFullWidthEnabled] = React.useState(false);
+  const [showMigrationModal, setShowMigrationModal] = React.useState(false);
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+  const [migrationChecked, setMigrationChecked] = React.useState(false);
 
 
   const mainContentRef = useRef<HTMLElement>(null);
   const [isMainContentFullscreen, setIsMainContentFullscreen] = useState(false);
 
   const getDefaultUserName = () => {
-    // Default fallback - user name will be loaded from IndexedDB in useEffect
-    return 'Aniket Mahato';
+    // Use user's name from auth or fallback
+    return user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   };
 
-  // Memoize IndexedDB helper functions to prevent re-creation on every render
+  // Check for migration on first load
+  useEffect(() => {
+    const checkForMigration = async () => {
+      if (!migrationChecked) {
+        // Check if user has completed migration or chosen "never show again"
+        const migrationCompleted = localStorage.getItem(`migration_completed_${user?.id}`) === 'true';
+        const neverShowAgain = localStorage.getItem(`migration_never_show_${user?.id}`) === 'true';
+
+        if (!migrationCompleted && !neverShowAgain) {
+          const hasDataToMigrate = await MigrationService.hasDataToMigrate();
+          if (hasDataToMigrate) {
+            setShowMigrationModal(true);
+          }
+        }
+        setMigrationChecked(true);
+      }
+    };
+
+    if (user) {
+      checkForMigration();
+    }
+  }, [user, migrationChecked]);
+
+  // Memoize Supabase helper functions to prevent re-creation on every render
   const fetchUserPreferences = useCallback(async () => {
     try {
-      const prefs = await DatabaseService.getUserPreferences();
+      const prefs = await SupabaseService.getUserPreferences();
       return prefs;
     } catch (error) {
-      console.error('❌ Error fetching user preferences from IndexedDB:', error);
+      console.error('❌ Error fetching user preferences from Supabase:', error);
       return null;
     }
   }, []);
@@ -56,32 +94,39 @@ export default function App() {
     try {
       const existing = await fetchUserPreferences() || {};
       const updated = { ...existing, ...prefs };
-      await DatabaseService.saveUserPreferences(updated);
+      await SupabaseService.saveUserPreferences(updated);
     } catch (error) {
-      console.error('❌ IndexedDB save error:', error);
+      console.error('❌ Supabase save error:', error);
     }
   }, [fetchUserPreferences]);
 
   React.useEffect(() => {
-    // Load preferences from IndexedDB on mount
+    // Load preferences from Supabase on mount
     const loadPreferences = async () => {
       try {
         const prefs = await fetchUserPreferences();
         if (prefs) {
           setIsMobileMenuOpen(!!prefs.is_mobile_menu_open);
           setIsProfileOpen(!!prefs.is_profile_open);
-          setUserName(prefs.user_name || ''); // Default to empty string if not found
+          setUserName(prefs.user_name || getDefaultUserName());
           setIsFullWidthEnabled(!!prefs.is_full_width_enabled);
+        } else {
+          // Set default values for new users
+          setUserName(getDefaultUserName());
         }
       } catch (error) {
         console.error('❌ Failed to load user preferences:', error);
+        // Set default values on error
+        setUserName(getDefaultUserName());
       } finally {
         setLoadingPrefs(false);
       }
     };
 
-    loadPreferences();
-  }, [fetchUserPreferences]);
+    if (user) {
+      loadPreferences();
+    }
+  }, [fetchUserPreferences, user]);
 
   React.useEffect(() => {
     if (!loadingPrefs) {
@@ -150,7 +195,38 @@ export default function App() {
                     to="/" 
                     className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:opacity-90 transition-opacity"
                   >
-                    <TradeTrackerLogo className="h-5 w-5 text-foreground" />
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-5 w-5 text-foreground"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      {/* Outer circle */}
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        fill="none"
+                      />
+                      {/* Diamond/gem shape */}
+                      <path
+                        d="M12 6L16 10L12 18L8 10L12 6Z"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="0.5"
+                        strokeLinejoin="round"
+                      />
+                      {/* Inner diamond lines */}
+                      <path
+                        d="M8 10L12 14L16 10"
+                        stroke="currentColor"
+                        strokeWidth="0.5"
+                        fill="none"
+                        opacity="0.7"
+                      />
+                    </svg>
                     <AnimatedBrandName className="text-foreground" />
                   </Link>
                   <Button
@@ -188,15 +264,38 @@ export default function App() {
                 {/* Right Side Actions */}
                 <div className="flex items-center gap-3">
                   <ThemeSwitcher />
-                  <Button
-                    variant="flat"
-                    size="sm"
-                    onPress={() => setIsProfileOpen(true)}
-                    className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all duration-300 min-h-0 min-w-0 shadow-sm"
-                    startContent={<Icon icon="lucide:user" className="h-4 w-4" />}
-                  >
-                    <span className="font-medium text-sm leading-none">{userName}</span>
-                  </Button>
+                  {user ? (
+                    <>
+                      <Button
+                        variant="flat"
+                        size="sm"
+                        onPress={() => setIsProfileOpen(true)}
+                        className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all duration-300 min-h-0 min-w-0 shadow-sm"
+                        startContent={<Icon icon="lucide:user" className="h-4 w-4" />}
+                      >
+                        <span className="font-medium text-sm leading-none">{userName}</span>
+                      </Button>
+                      <Button
+                        isIconOnly
+                        variant="light"
+                        size="sm"
+                        onPress={signOut}
+                        className="hidden sm:flex hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-300"
+                      >
+                        <Icon icon="lucide:log-out" className="h-4 w-4" />
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      variant="flat"
+                      size="sm"
+                      onPress={() => setShowAuthModal(true)}
+                      className="hidden sm:flex items-center gap-1 px-3 py-1.5 rounded-full border border-white/20 bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all duration-300 min-h-0 min-w-0 shadow-sm"
+                      startContent={<Icon icon="lucide:log-in" className="h-4 w-4" />}
+                    >
+                      <span className="font-medium text-sm leading-none">Sign In</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </nav>
@@ -229,19 +328,49 @@ export default function App() {
                         </Link>
                       );
                     })}
-                    {/* Profile Button for Mobile */}
-                    <Button
-                      variant="light"
-                      size="sm"
-                      onPress={() => {
-                        setIsProfileOpen(true);
-                        setIsMobileMenuOpen(false); // Close mobile menu when opening profile
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors rounded-lg text-gray-700 dark:text-gray-300 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-all duration-300"
-                      startContent={<Icon icon="lucide:user" className="h-4 w-4" />}
-                    >
-                      <span>{userName || 'Profile'}</span>
-                    </Button>
+                    {user ? (
+                      <>
+                        {/* Profile Button for Mobile */}
+                        <Button
+                          variant="light"
+                          size="sm"
+                          onPress={() => {
+                            setIsProfileOpen(true);
+                            setIsMobileMenuOpen(false); // Close mobile menu when opening profile
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors rounded-lg text-gray-700 dark:text-gray-300 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-all duration-300"
+                          startContent={<Icon icon="lucide:user" className="h-4 w-4" />}
+                        >
+                          <span>{userName || 'Profile'}</span>
+                        </Button>
+                        {/* Sign Out Button for Mobile */}
+                        <Button
+                          isIconOnly
+                          variant="light"
+                          size="sm"
+                          onPress={() => {
+                            signOut();
+                            setIsMobileMenuOpen(false);
+                          }}
+                          className="flex items-center justify-center text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/20 transition-all duration-300"
+                        >
+                          <Icon icon="lucide:log-out" className="h-4 w-4" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        variant="light"
+                        size="sm"
+                        onPress={() => {
+                          setShowAuthModal(true);
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors rounded-lg text-gray-700 dark:text-gray-300 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-all duration-300"
+                        startContent={<Icon icon="lucide:log-in" className="h-4 w-4" />}
+                      >
+                        <span>Sign In</span>
+                      </Button>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -256,6 +385,9 @@ export default function App() {
             <ErrorBoundary>
               <div className={isFullWidthEnabled ? "py-6" : "max-w-7xl mx-auto py-6"}>
                 <Switch>
+                  <Route path="/auth/callback">
+                    <AuthCallback />
+                  </Route>
                   <Route path="/analytics">
                     <TradeAnalytics />
                   </Route>
@@ -286,14 +418,66 @@ export default function App() {
             setIsFullWidthEnabled={setIsFullWidthEnabled}
           />
 
-          <TruePortfolioSetupManager
-            userName={userName}
-            setUserName={setUserName}
-          />
+          {/* Only show TruePortfolio setup for authenticated users */}
+          {user && (
+            <TruePortfolioSetupManager
+              userName={userName}
+              setUserName={setUserName}
+            />
+          )}
+
+          {/* Migration Modal - Only for authenticated users */}
+          {user && (
+            <MigrationModal
+              isOpen={showMigrationModal}
+              onClose={() => {
+                // Just close the modal - don't mark as dismissed
+                // User will see it again next time if they still have data
+                setShowMigrationModal(false);
+              }}
+              onMigrationComplete={() => {
+                // Mark migration as completed for this user
+                if (user?.id) {
+                  localStorage.setItem(`migration_completed_${user.id}`, 'true');
+                }
+                setShowMigrationModal(false);
+                // Optionally refresh the page or reload data
+                window.location.reload();
+              }}
+              onNeverShowAgain={() => {
+                // Mark as "never show again" for this user
+                if (user?.id) {
+                  localStorage.setItem(`migration_never_show_${user.id}`, 'true');
+                }
+                setShowMigrationModal(false);
+              }}
+            />
+          )}
+
           <Analytics />
+          {/* <AuthDebug /> */}
+
+          {/* Auth Modal for Guest Users */}
+          {showAuthModal && (
+            <AuthModal
+              isOpen={showAuthModal}
+              onClose={() => setShowAuthModal(false)}
+            />
+          )}
           </div>
         </GlobalFilterProvider>
       </AccountingMethodProvider>
     </TruePortfolioProvider>
+  );
+}
+
+// Main App Component with Authentication
+export default function App() {
+  return (
+    <AuthProvider>
+      <AuthGuard>
+        <AppContent />
+      </AuthGuard>
+    </AuthProvider>
   );
 }

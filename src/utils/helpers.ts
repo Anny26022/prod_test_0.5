@@ -3,7 +3,7 @@ export const generateId = (): string => {
          Math.random().toString(36).substring(2, 15);
 };
 
-import { DatabaseService } from '../db/database';
+import { SupabaseService } from '../services/supabaseService';
 
 /**
  * Safely get a value from IndexedDB with fallback
@@ -18,7 +18,7 @@ export const getFromIndexedDB = async <T>(
   parser?: (value: any) => T
 ): Promise<T> => {
   try {
-    const stored = await DatabaseService.getMiscData(key);
+    const stored = await SupabaseService.getMiscData(key);
     if (stored === null || stored === undefined) return fallback;
 
     if (parser) {
@@ -27,7 +27,7 @@ export const getFromIndexedDB = async <T>(
 
     return stored as T;
   } catch (error) {
-    console.error(`❌ Error reading from IndexedDB key "${key}":`, error);
+    console.error(`❌ Error reading from Supabase key "${key}":`, error);
     return fallback;
   }
 };
@@ -46,9 +46,9 @@ export const setToIndexedDB = async <T>(
 ): Promise<boolean> => {
   try {
     const valueToStore = serializer ? serializer(value) : value;
-    return await DatabaseService.saveMiscData(key, valueToStore);
+    return await SupabaseService.saveMiscData(key, valueToStore);
   } catch (error) {
-    console.error(`❌ Error saving to IndexedDB key "${key}":`, error);
+    console.error(`❌ Error saving to Supabase key "${key}":`, error);
     return false;
   }
 };

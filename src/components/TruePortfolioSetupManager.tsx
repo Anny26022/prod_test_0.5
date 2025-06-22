@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useTruePortfolio } from '../utils/TruePortfolioContext';
 import { TruePortfolioSetup } from './TruePortfolioSetup';
 import { WelcomeMessageModal } from './WelcomeMessageModal';
+import { useAuth } from '../context/AuthContext';
 
 const USER_NAME_LOCAL_KEY = 'user_name';
 const WELCOME_COMPLETE_LOCAL_KEY = 'welcome_complete';
@@ -15,11 +16,17 @@ export const TruePortfolioSetupManager: React.FC<TruePortfolioSetupManagerProps>
   userName,
   setUserName
 }) => {
+  const { user } = useAuth();
   const { yearlyStartingCapitals } = useTruePortfolio();
   const [isSetupModalOpen, setIsSetupModalOpen] = useState(false);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const [hasCheckedSetup, setHasCheckedSetup] = useState(false);
   const [hasCompletedWelcome, setHasCompletedWelcome] = useState<boolean>(() => localStorage.getItem(WELCOME_COMPLETE_LOCAL_KEY) === 'true');
+
+  // Early return if user is not authenticated
+  if (!user) {
+    return null;
+  }
 
   // Effect to load user name and welcome status on initial mount
   useEffect(() => {

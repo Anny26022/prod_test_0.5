@@ -91,43 +91,43 @@ const EditableText: React.FC<{
   );
 };
 
-// IndexedDB helpers using Dexie
-import { DatabaseService } from '../db/database';
+// Supabase helpers
+import { SupabaseService } from '../services/supabaseService';
 
 async function fetchTaxData(year: number) {
   try {
-    const taxRecord = await DatabaseService.getTaxData(year);
+    const taxRecord = await SupabaseService.getTaxData(year);
     return taxRecord ? taxRecord.data : {};
   } catch (error) {
-    console.error('❌ Error fetching tax data from IndexedDB:', error);
+    console.error('❌ Error fetching tax data from Supabase:', error);
     return {};
   }
 }
 
 async function saveTaxData(year: number, taxData: any): Promise<boolean> {
   try {
-    return await DatabaseService.saveTaxData(year, taxData);
+    return await SupabaseService.saveTaxData(year, taxData);
   } catch (error) {
-    console.error('❌ IndexedDB save error:', error);
+    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
 
 async function fetchCommentaryData(year: string) {
   try {
-    const commentaryRecord = await DatabaseService.getCommentaryData(year);
+    const commentaryRecord = await SupabaseService.getCommentaryData(year);
     return commentaryRecord ? commentaryRecord.data : {};
   } catch (error) {
-    console.error('❌ Error fetching commentary data from IndexedDB:', error);
+    console.error('❌ Error fetching commentary data from Supabase:', error);
     return {};
   }
 }
 
 async function saveCommentaryData(year: string, commentaryData: any): Promise<boolean> {
   try {
-    return await DatabaseService.saveCommentaryData(year, commentaryData);
+    return await SupabaseService.saveCommentaryData(year, commentaryData);
   } catch (error) {
-    console.error('❌ IndexedDB commentary save error:', error);
+    console.error('❌ Supabase commentary save error:', error);
     return false;
   }
 }

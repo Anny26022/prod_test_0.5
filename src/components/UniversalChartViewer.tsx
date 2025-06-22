@@ -624,10 +624,24 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
             <ModalBody className="p-0 overflow-hidden">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-[80vh]">
-                  <Icon icon="lucide:loader-2" className="w-12 h-12 animate-spin text-primary-500 mb-4" />
-                  <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">Loading chart images...</p>
-                  <Progress value={loadingProgress} className="w-64" />
-                  <p className="text-sm text-gray-500 mt-2">{Math.round(loadingProgress)}%</p>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="mb-6"
+                  >
+                    <Icon icon="lucide:loader-2" className="w-12 h-12 animate-spin text-foreground mb-4" />
+                  </motion.div>
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: 0.1 }}
+                    className="text-center"
+                  >
+                    <p className="text-lg font-medium text-foreground mb-4 font-sans">Loading chart images...</p>
+                    <Progress value={loadingProgress} className="w-64 mb-2" color="primary" />
+                    <p className="text-sm text-foreground/70 font-sans">{Math.round(loadingProgress)}%</p>
+                  </motion.div>
                 </div>
               ) : error ? (
                 <div className="flex flex-col items-center justify-center h-[80vh]">

@@ -74,12 +74,10 @@ export class MigrationService {
       if (!milestonesResult.success) stats.errors++;
 
       // 8. Migrate Misc Data
-      console.log('📦 Migrating misc data...');
       const miscResult = await this.migrateMiscData();
       if (!miscResult.success) stats.errors++;
 
       // 9. Create backup of localStorage data before cleanup
-      console.log('💾 Creating backup of localStorage data...');
       await this.createLocalStorageBackup();
 
       const totalMigrated = stats.trades + stats.settings + stats.preferences + stats.portfolio;
@@ -155,17 +153,14 @@ export class MigrationService {
     try {
       const preferencesData = localStorage.getItem('userPreferences');
       if (!preferencesData) {
-        console.log('👤 No user preferences found in localStorage');
         return { success: true, count: 0 };
       }
 
       const preferences = JSON.parse(preferencesData);
       const success = await DatabaseService.saveUserPreferences(preferences);
-      console.log('👤 Migrated user preferences');
-      
+
       return { success, count: 1 };
     } catch (error) {
-      console.error('❌ Failed to migrate user preferences:', error);
       return { success: false, count: 0 };
     }
   }
@@ -342,10 +337,8 @@ export class MigrationService {
         }
       }
 
-      console.log(`📦 Migrated ${count} misc data records`);
       return { success: true, count };
     } catch (error) {
-      console.error('❌ Failed to migrate misc data:', error);
       return { success: false, count: 0 };
     }
   }

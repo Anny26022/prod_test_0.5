@@ -235,10 +235,8 @@ export class DatabaseService {
       const cleanedTrade = cleanDataForIndexedDB(trade);
 
       await db.trades.put(cleanedTrade);
-      console.log(`✅ Saved trade: ${trade.name} (${trade.id})`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to save trade to IndexedDB:', error);
       return false;
     }
   }
@@ -253,10 +251,8 @@ export class DatabaseService {
         await db.trades.clear();
         await db.trades.bulkAdd(cleanedTrades);
       });
-      console.log(`✅ Saved ${trades.length} trades to IndexedDB`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to save trades to IndexedDB:', error);
       return false;
     }
   }
@@ -312,7 +308,6 @@ export class DatabaseService {
       allPrefs.sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0));
       return allPrefs[0];
     } catch (error) {
-      console.error('❌ Failed to get user preferences from IndexedDB:', error);
       return null;
     }
   }
@@ -324,10 +319,8 @@ export class DatabaseService {
         await db.userPreferences.clear();
         await db.userPreferences.add(preferences);
       });
-      console.log('✅ Saved user preferences to IndexedDB');
       return true;
     } catch (error) {
-      console.error('❌ Failed to save user preferences to IndexedDB:', error);
       return false;
     }
   }
@@ -338,7 +331,6 @@ export class DatabaseService {
     try {
       return await db.portfolioData.toArray();
     } catch (error) {
-      console.error('❌ Failed to get portfolio data from IndexedDB:', error);
       return [];
     }
   }
@@ -528,15 +520,12 @@ export class DatabaseService {
       const cleanedValue = cleanDataForIndexedDB(value);
 
       if (cleanedValue === undefined) {
-        console.warn(`⚠️ Cannot store non-serializable data for key ${key}, skipping`);
         return false;
       }
 
       await db.miscData.put({ key, value: cleanedValue });
-      console.log(`✅ Saved misc data: ${key}`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to save misc data to IndexedDB:', error);
       return false;
     }
   }
@@ -814,10 +803,8 @@ export class DatabaseService {
         await db.miscData.clear();
         await db.chartImageBlobs.clear();
       });
-      console.log('✅ Cleared all data from IndexedDB');
       return true;
     } catch (error) {
-      console.error('❌ Failed to clear data from IndexedDB:', error);
       return false;
     }
   }

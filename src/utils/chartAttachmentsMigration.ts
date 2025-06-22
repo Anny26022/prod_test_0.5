@@ -35,7 +35,6 @@ export async function checkMigrationNeeded(): Promise<boolean> {
  * Migrate existing trade data to support chart attachments
  */
 export async function migrateToChartAttachments(): Promise<MigrationResult> {
-  console.log('🚀 Starting chart attachments migration...');
   
   const result: MigrationResult = {
     success: false,
@@ -50,11 +49,9 @@ export async function migrateToChartAttachments(): Promise<MigrationResult> {
   try {
     // 1. Verify database is accessible
     const dbSize = await DatabaseService.getDatabaseSize();
-    console.log(`📊 Database contains ${dbSize.trades} trades`);
 
     // 2. Get all existing trades
     const trades = await DatabaseService.getAllTrades();
-    console.log(`🔍 Processing ${trades.length} trades for migration...`);
 
     // 3. Process each trade to ensure chart attachments field exists
     let processedCount = 0;

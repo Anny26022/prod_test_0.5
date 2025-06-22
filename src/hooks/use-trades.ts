@@ -22,9 +22,8 @@ import {
   calcRealizedPL_FIFO
 } from "../utils/tradeCalculations";
 import { calculateTradePL } from "../utils/accountingUtils";
-import { DatabaseService, TradeRecord } from "../db/database";
-import { MigrationService } from "../db/migration";
-// Migrated from localStorage to IndexedDB using Dexie
+import { SupabaseService } from "../services/supabaseService";
+// Migrated from IndexedDB to Supabase with authentication
 
 // Define SortDirection type compatible with HeroUI Table
 type SortDirection = "ascending" | "descending";
@@ -39,79 +38,27 @@ const STORAGE_KEY = 'trades_data';
 const TRADE_SETTINGS_KEY = 'tradeSettings';
 const MISC_DATA_PREFIX = 'misc_';
 
-// IndexedDB helpers using Dexie
-async function getTradesFromIndexedDB(): Promise<Trade[]> {
+// Supabase helpers
+async function getTradesFromSupabase(): Promise<Trade[]> {
   if (typeof window === 'undefined') return []; // In a server-side environment, return empty array
 
   try {
-    const trades = await DatabaseService.getAllTrades();
-    console.log(`📊 Loaded ${trades.length} trades from IndexedDB`);
+    const trades = await SupabaseService.getAllTrades();
     return trades;
   } catch (error) {
-    console.error('❌ Error loading trades from IndexedDB:', error);
-
-    // Try to recover from backup
-    try {
-      const backup = await DatabaseService.getLatestBackup('trades');
-      if (backup && backup.data && Array.isArray(backup.data)) {
-        console.log('🔄 Recovered trades from IndexedDB backup');
-        return backup.data;
-      }
-    } catch (backupError) {
-      console.error('❌ Failed to recover from IndexedDB backup:', backupError);
-    }
-
+    console.error('❌ Failed to get trades from Supabase:', error);
     return []; // Always return empty array on error to prevent mock data
   }
 }
 
-async function saveTradesToIndexedDB(trades: Trade[]): Promise<boolean> {
+async function saveTradesToSupabase(trades: Trade[]): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  console.log(`💾 [saveTradesToIndexedDB] Starting save of ${trades.length} trades...`);
-
   try {
-    // Create backup before saving
-    console.log(`💾 [saveTradesToIndexedDB] Creating backup...`);
-    await DatabaseService.createBackup('trades', trades, 'Auto-backup before save');
-
-    // Convert trades to TradeRecord format with timestamps
-    const tradesWithTimestamps: TradeRecord[] = trades.map(trade => ({
-      ...trade,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }));
-
-    console.log(`💾 [saveTradesToIndexedDB] Saving to database...`);
-    const success = await DatabaseService.saveAllTrades(tradesWithTimestamps);
-
-    if (success) {
-      console.log(`✅ [saveTradesToIndexedDB] Successfully saved ${trades.length} trades to IndexedDB`);
-
-      // Verify the save by reading back
-      const savedTrades = await DatabaseService.getAllTrades();
-      console.log(`✅ [saveTradesToIndexedDB] Verification: ${savedTrades.length} trades found in database`);
-    } else {
-      console.error(`❌ [saveTradesToIndexedDB] Save operation returned false`);
-    }
-
+    const success = await SupabaseService.saveAllTrades(trades);
     return success;
   } catch (error) {
-    console.error('❌ [saveTradesToIndexedDB] IndexedDB save error:', error);
-
-    // IndexedDB doesn't have quota issues like localStorage, but handle other errors
-    try {
-      // Try to restore from backup if save failed
-      const backup = await DatabaseService.getLatestBackup('trades');
-      if (backup && backup.data) {
-        await DatabaseService.saveAllTrades(backup.data);
-        console.log('🔄 Restored trades from IndexedDB backup');
-        return true;
-      }
-    } catch (restoreError) {
-      console.error('❌ Failed to restore from IndexedDB backup:', restoreError);
-    }
-
+    console.error('❌ Failed to save trades to Supabase:', error);
     return false;
   }
 }
@@ -119,10 +66,9 @@ async function saveTradesToIndexedDB(trades: Trade[]): Promise<boolean> {
 async function getTradeSettings() {
   if (typeof window === 'undefined') return null;
   try {
-    const settings = await DatabaseService.getTradeSettings();
+    const settings = await SupabaseService.getTradeSettings();
     return settings;
   } catch (error) {
-    console.error('❌ Error fetching trade settings from IndexedDB:', error);
     return null;
   }
 }
@@ -130,9 +76,8 @@ async function getTradeSettings() {
 async function saveTradeSettings(settings: any): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    return await DatabaseService.saveTradeSettings(settings);
+    return await SupabaseService.saveTradeSettings(settings);
   } catch (error) {
-    console.error('❌ IndexedDB save error for settings:', error);
     return false;
   }
 }
@@ -140,16 +85,8 @@ async function saveTradeSettings(settings: any): Promise<boolean> {
 async function clearAllTradeAndSettingsData(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
   try {
-    console.log('🗑️ Starting comprehensive IndexedDB clearing...');
-
-    // Clear all IndexedDB data
-    const success = await DatabaseService.clearAllData();
-
-    if (success) {
-      console.log('✅ Cleared all IndexedDB data');
-    } else {
-      console.error('❌ Failed to clear IndexedDB data');
-    }
+    // Clear all Supabase data
+    const success = await SupabaseService.clearAllData();
 
     // Also clear any remaining localStorage data for legacy cleanup
     const keysToRemove = [];
@@ -190,15 +127,12 @@ async function clearAllTradeAndSettingsData(): Promise<boolean> {
     // Clear sessionStorage as well
     try {
       sessionStorage.clear();
-      console.log('🗑️ Cleared all sessionStorage');
     } catch (error) {
-      console.error('❌ Failed to clear sessionStorage:', error);
+      // Silent cleanup
     }
 
-    console.log('✅ Comprehensive data clearing completed');
     return success;
   } catch (error) {
-    console.error('💥 Error clearing all trade and settings data:', error);
     return false;
   }
 }
@@ -548,24 +482,11 @@ export const useTrades = () => {
       setIsLoading(true);
 
       try {
-        // Check if migration is needed
-        const needsMigration = await MigrationService.needsMigration();
+        // Migration is now handled by the MigrationModal component
+        // No need for automatic migration checks here
 
-        if (needsMigration) {
-          console.log('🔄 Migration needed from localStorage to IndexedDB');
-          const migrationResult = await MigrationService.migrateFromLocalStorage();
-
-          if (migrationResult.success) {
-            console.log('✅ Migration completed successfully');
-            // Optionally clean up localStorage after successful migration
-            // await MigrationService.cleanupLocalStorage();
-          } else {
-            console.error('❌ Migration failed:', migrationResult.message);
-          }
-        }
-
-        // Load trades from IndexedDB
-        const loadedTrades = await getTradesFromIndexedDB();
+        // Load trades from Supabase
+        const loadedTrades = await getTradesFromSupabase();
         const settings = await getTradeSettings();
 
         // Perform initial recalculation using the memoized helper
@@ -653,13 +574,13 @@ export const useTrades = () => {
 
         // Update beforeEntry blob if exists
         if (trade.chartAttachments.beforeEntry?.storage === 'blob' && trade.chartAttachments.beforeEntry.blobId) {
-          await DatabaseService.updateChartImageBlobTradeId(trade.chartAttachments.beforeEntry.blobId, trade.id);
+          await SupabaseService.updateChartImageBlobTradeId(trade.chartAttachments.beforeEntry.blobId, trade.id);
           console.log(`📸 Updated beforeEntry blob tradeId to ${trade.id}`);
         }
 
         // Update afterExit blob if exists
         if (trade.chartAttachments.afterExit?.storage === 'blob' && trade.chartAttachments.afterExit.blobId) {
-          await DatabaseService.updateChartImageBlobTradeId(trade.chartAttachments.afterExit.blobId, trade.id);
+          await SupabaseService.updateChartImageBlobTradeId(trade.chartAttachments.afterExit.blobId, trade.id);
           console.log(`📸 Updated afterExit blob tradeId to ${trade.id}`);
         }
       } catch (error) {
@@ -697,14 +618,14 @@ export const useTrades = () => {
       const newTrades = recalculateTradesWithCurrentPortfolio(combinedTrades);
       console.log(`➕ [addTrade] After adding and recalculating: ${newTrades.length} trades`);
 
-      // Persist to IndexedDB asynchronously
-      saveTradesToIndexedDB(newTrades).then(success => {
-        console.log(`📊 [addTrade] IndexedDB save ${success ? 'successful' : 'failed'}`);
+      // Persist to Supabase asynchronously
+      saveTradesToSupabase(newTrades).then(success => {
+        console.log(`📊 [addTrade] Supabase save ${success ? 'successful' : 'failed'}`);
         if (!success) {
-          console.error('❌ [addTrade] Failed to save to IndexedDB - data may be lost on refresh!');
+          console.error('❌ [addTrade] Failed to save to Supabase - data may be lost on refresh!');
         }
       }).catch(error => {
-        console.error('❌ [addTrade] IndexedDB save error:', error);
+        console.error('❌ [addTrade] Supabase save error:', error);
       });
 
       return newTrades;
@@ -726,13 +647,13 @@ export const useTrades = () => {
 
         // Update beforeEntry blob if exists
         if (updatedTrade.chartAttachments.beforeEntry?.storage === 'blob' && updatedTrade.chartAttachments.beforeEntry.blobId) {
-          await DatabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.beforeEntry.blobId, updatedTrade.id);
+          await SupabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.beforeEntry.blobId, updatedTrade.id);
           console.log(`📸 Updated beforeEntry blob tradeId to ${updatedTrade.id}`);
         }
 
         // Update afterExit blob if exists
         if (updatedTrade.chartAttachments.afterExit?.storage === 'blob' && updatedTrade.chartAttachments.afterExit.blobId) {
-          await DatabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.afterExit.blobId, updatedTrade.id);
+          await SupabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.afterExit.blobId, updatedTrade.id);
           console.log(`📸 Updated afterExit blob tradeId to ${updatedTrade.id}`);
         }
       } catch (error) {
@@ -801,9 +722,9 @@ export const useTrades = () => {
         console.log(`⏰ [updateTrade] Starting recalculation...`);
         const recalculatedTrades = recalculateTradesWithCurrentPortfolio(updatedTrades);
 
-        console.log(`⏰ [updateTrade] Saving to IndexedDB...`);
-        saveTradesToIndexedDB(recalculatedTrades).then(saveSuccess => {
-          console.log(`⏰ [updateTrade] IndexedDB save ${saveSuccess ? 'successful' : 'failed'}`);
+        console.log(`⏰ [updateTrade] Saving to Supabase...`);
+        saveTradesToSupabase(recalculatedTrades).then(saveSuccess => {
+          console.log(`⏰ [updateTrade] Supabase save ${saveSuccess ? 'successful' : 'failed'}`);
         });
 
         // Execute all callbacks after update is complete
@@ -860,9 +781,9 @@ export const useTrades = () => {
       const newTrades = recalculateTradesWithCurrentPortfolio(filteredTrades);
       console.log(`🗑️ [deleteTrade] After recalculation: ${newTrades.length} trades`);
 
-      // Persist to IndexedDB
-      saveTradesToIndexedDB(newTrades).then(saveSuccess => {
-        console.log(`🗑️ [deleteTrade] IndexedDB save ${saveSuccess ? 'successful' : 'failed'}`);
+      // Persist to Supabase
+      saveTradesToSupabase(newTrades).then(saveSuccess => {
+        console.log(`🗑️ [deleteTrade] Supabase save ${saveSuccess ? 'successful' : 'failed'}`);
       });
 
       return newTrades;
@@ -900,8 +821,8 @@ export const useTrades = () => {
 
       // First pass: Skip expensive calculations for faster import
       const quickProcessedTrades = recalculateTradesWithCurrentPortfolio(combinedTrades, true);
-      // Save to IndexedDB asynchronously
-      saveTradesToIndexedDB(quickProcessedTrades).then(success => {
+      // Save to Supabase asynchronously
+      saveTradesToSupabase(quickProcessedTrades).then(success => {
         console.log(`📊 [bulkImport] Quick save ${success ? 'successful' : 'failed'}`);
       });
 
@@ -917,8 +838,8 @@ export const useTrades = () => {
 
         setTrades(currentTrades => {
           const fullyCalculatedTrades = recalculateTradesWithCurrentPortfolio(currentTrades, false);
-          // Save fully calculated trades to IndexedDB
-          saveTradesToIndexedDB(fullyCalculatedTrades).then(success => {
+          // Save fully calculated trades to Supabase
+          saveTradesToSupabase(fullyCalculatedTrades).then(success => {
             console.log(`📊 [bulkImport] Full recalc save ${success ? 'successful' : 'failed'}`);
           });
 

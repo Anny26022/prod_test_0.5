@@ -3,18 +3,18 @@ import { CapitalChange, MonthlyCapital, MonthlyCapitalHistory } from '../types/t
 import { generateId } from '../utils/helpers';
 import { useTruePortfolio } from '../utils/TruePortfolioContext';
 import { calculateTradePL } from '../utils/accountingUtils';
-import { DatabaseService } from '../db/database';
-// Migrated from localStorage to IndexedDB using Dexie
+import { SupabaseService } from '../services/supabaseService';
+// Migrated from IndexedDB to Supabase with authentication
 
 // IndexedDB helpers using Dexie
 const loadCapitalChanges = async (): Promise<CapitalChange[]> => {
   if (typeof window === 'undefined') return [];
 
   try {
-    const saved = await DatabaseService.getMiscData('capital_changes');
+    const saved = await SupabaseService.getMiscData('capital_changes');
     return saved ? saved : [];
   } catch (error) {
-    console.error('❌ Error loading capital changes from IndexedDB:', error);
+    console.error('❌ Error loading capital changes from Supabase:', error);
     return [];
   }
 };
@@ -22,59 +22,59 @@ const loadCapitalChanges = async (): Promise<CapitalChange[]> => {
 const loadMonthlyCapitalHistory = async (): Promise<MonthlyCapitalHistory[]> => {
   if (typeof window === 'undefined') return [];
   try {
-    const saved = await DatabaseService.getMiscData('monthly_capital_history');
+    const saved = await SupabaseService.getMiscData('monthly_capital_history');
     return saved ? saved : [];
   } catch (error) {
-    console.error('❌ Error loading monthly capital history from IndexedDB:', error);
+    console.error('❌ Error loading monthly capital history from Supabase:', error);
     return [];
   }
 };
 
 const saveMonthlyCapitalHistory = async (history: MonthlyCapitalHistory[]): Promise<boolean> => {
   try {
-    return await DatabaseService.saveMiscData('monthly_capital_history', history);
+    return await SupabaseService.saveMiscData('monthly_capital_history', history);
   } catch (error) {
-    console.error('❌ Error saving monthly capital history to IndexedDB:', error);
+    console.error('❌ Error saving monthly capital history to Supabase:', error);
     return false;
   }
 };
 
-// IndexedDB helpers using Dexie
+// Supabase helpers
 
 async function loadCapitalChangesLegacy(): Promise<CapitalChange[]> {
   try {
-    const stored = await DatabaseService.getMiscData('capitalChanges');
+    const stored = await SupabaseService.getMiscData('capitalChanges');
     return stored ? stored : [];
   } catch (error) {
-    console.error('❌ Error loading capital changes from IndexedDB:', error);
+    console.error('❌ Error loading capital changes from Supabase:', error);
     return [];
   }
 }
 
 async function saveCapitalChanges(changes: CapitalChange[]): Promise<boolean> {
   try {
-    return await DatabaseService.saveMiscData('capitalChanges', changes);
+    return await SupabaseService.saveMiscData('capitalChanges', changes);
   } catch (error) {
-    console.error('❌ IndexedDB save error:', error);
+    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
 
 async function fetchMonthlyCapitalHistory(): Promise<any[]> {
   try {
-    const stored = await DatabaseService.getMiscData('monthlyCapitalHistory');
+    const stored = await SupabaseService.getMiscData('monthlyCapitalHistory');
     return stored ? stored : [];
   } catch (error) {
-    console.error('❌ Error fetching monthly capital history from IndexedDB:', error);
+    console.error('❌ Error fetching monthly capital history from Supabase:', error);
     return [];
   }
 }
 
 async function saveMonthlyCapitalHistoryLegacy(history: any[]): Promise<boolean> {
   try {
-    return await DatabaseService.saveMiscData('monthlyCapitalHistory', history);
+    return await SupabaseService.saveMiscData('monthlyCapitalHistory', history);
   } catch (error) {
-    console.error('❌ IndexedDB save error:', error);
+    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
@@ -100,7 +100,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
   const [monthlyCapitalHistory, setMonthlyCapitalHistory] = React.useState<MonthlyCapitalHistory[]>([]);
   const [loading, setLoading] = React.useState(true);
 
-  // Load from IndexedDB on mount and sync with TruePortfolio
+  // Load from Supabase on mount and sync with TruePortfolio
   React.useEffect(() => {
     const loadData = async () => {
       try {
@@ -118,7 +118,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
     loadData();
   }, []);
 
-  // Save capital changes to IndexedDB
+  // Save capital changes to Supabase
   React.useEffect(() => {
     if (!loading) {
       saveCapitalChanges(localCapitalChanges).then(success => {
@@ -127,7 +127,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
     }
   }, [localCapitalChanges, loading]);
 
-  // Save monthly capital history to IndexedDB
+  // Save monthly capital history to Supabase
   React.useEffect(() => {
     if (!loading) {
       saveMonthlyCapitalHistoryLegacy(monthlyCapitalHistory).then(success => {

@@ -44,9 +44,11 @@ export const PriceTicker: React.FC<PriceTickerProps> = ({
 
   if (loading && priceTicks.length === 0) {
     return (
-      <div className="flex justify-center items-center p-4">
-        <Spinner size="sm" />
-        <span className="ml-2">Loading {symbol}...</span>
+      <div className="flex justify-center items-center p-4 gap-3">
+        <div className="relative">
+          <div className="w-4 h-4 border border-foreground/20 border-t-foreground rounded-full animate-spin" />
+        </div>
+        <span className="text-sm font-medium text-foreground/80 font-sans">Loading {symbol}...</span>
       </div>
     );
   }
