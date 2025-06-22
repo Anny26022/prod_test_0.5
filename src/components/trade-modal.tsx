@@ -388,14 +388,18 @@ import * as Papa from "papaparse"; // Centralized import
       if (!trade?.id) return;
 
       try {
-        const { DatabaseService } = await import('../db/database');
+        // PURE SUPABASE: Load from Supabase instead of IndexedDB
+        const { SupabaseService } = await import('../services/supabaseService');
+        const { ChartImageService } = await import('../services/chartImageService');
 
-        // Always reload from database to get the latest state
+        // Always reload from Supabase to get the latest state
         // This is especially important in upload-only mode to reflect any deletions
-        const [blobs, currentTrade] = await Promise.all([
-          DatabaseService.getTradeChartImageBlobs(trade.id),
-          DatabaseService.getTrade(trade.id)
+        const [supabaseBlobs, currentTrade] = await Promise.all([
+          SupabaseService.getTradeChartImageBlobs(trade.id),
+          SupabaseService.getTrade(trade.id)
         ]);
+
+        console.log(`📸 [TradeModal] Loading chart images for trade ${trade.id}:`, supabaseBlobs.length, 'blobs found');
 
         // Start with the current trade's chart attachments (if any)
         let attachments: TradeChartAttachments = {};
@@ -405,30 +409,38 @@ import * as Papa from "papaparse"; // Centralized import
           attachments = { ...currentTrade.chartAttachments };
         }
 
-        // Process blob storage images and add/update them
-        if (blobs.length > 0) {
-          for (const blob of blobs) {
-            // Create a proper data URL from the blob
-            const dataUrl = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onload = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob.data);
-            });
+        // Process Supabase blob storage images and add/update them
+        if (supabaseBlobs.length > 0) {
+          for (const supabaseBlob of supabaseBlobs) {
+            console.log(`📸 [TradeModal] Processing Supabase blob: ${supabaseBlob.filename} (${supabaseBlob.image_type})`);
 
+            // Create chart image object with blob reference
             const chartImage: ChartImage = {
-              id: blob.id,
-              filename: blob.filename,
-              size: blob.size,
-              mimeType: blob.mimeType,
-              dataUrl: dataUrl,
-              uploadedAt: blob.uploadedAt,
-              compressed: blob.compressed,
-              originalSize: blob.originalSize,
+              id: supabaseBlob.id,
+              filename: supabaseBlob.filename,
+              size: supabaseBlob.size_bytes,
+              mimeType: supabaseBlob.mime_type as any,
+              uploadedAt: new Date(supabaseBlob.uploaded_at),
+              compressed: supabaseBlob.compressed || false,
+              originalSize: supabaseBlob.original_size,
               storage: 'blob',
-              blobId: blob.id
+              blobId: supabaseBlob.id
             };
 
-            attachments[blob.imageType] = chartImage;
+            // Get data URL using the chart image service
+            try {
+              const dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
+              if (dataUrl) {
+                chartImage.dataUrl = dataUrl;
+                console.log(`✅ [TradeModal] Generated data URL for ${supabaseBlob.filename}`);
+              } else {
+                console.warn(`⚠️ [TradeModal] Failed to generate data URL for ${supabaseBlob.filename}`);
+              }
+            } catch (error) {
+              console.error(`❌ [TradeModal] Error generating data URL for ${supabaseBlob.filename}:`, error);
+            }
+
+            attachments[supabaseBlob.image_type as 'beforeEntry' | 'afterExit'] = chartImage;
           }
         }
 
@@ -470,12 +482,25 @@ import * as Papa from "papaparse"; // Centralized import
       setIsAutoSaving(true);
       try {
         // Save to sessionStorage for temporary persistence
-        sessionStorage.setItem(sessionKey + '_formData', JSON.stringify(formData));
+        // EXCLUDE chart attachments to prevent quota exceeded errors
+        const sessionFormData = { ...formData };
+        if (sessionFormData.chartAttachments) {
+          // Remove chart attachments from session storage to save space
+          delete sessionFormData.chartAttachments;
+        }
+        sessionStorage.setItem(sessionKey + '_formData', JSON.stringify(sessionFormData));
 
         // Also save to localStorage as backup with timestamp
+        // EXCLUDE chart attachments to prevent quota exceeded errors
+        const backupFormData = { ...formData };
+        if (backupFormData.chartAttachments) {
+          // Remove chart attachments from backup to save space
+          delete backupFormData.chartAttachments;
+        }
+
         const backupKey = `tradeBackup_${sessionKey}_${Date.now()}`;
         localStorage.setItem(backupKey, JSON.stringify({
-          formData,
+          formData: backupFormData,
           timestamp: Date.now(),
           sessionKey
         }));
@@ -620,6 +645,10 @@ import * as Papa from "papaparse"; // Centralized import
     // Update local state
     setChartAttachments(newChartAttachments);
     setIsDirty(true);
+
+    // Trigger chart refresh for Universal Chart Viewer
+    setChartRefreshTrigger(prev => prev + 1);
+    console.log('🔄 Chart uploaded, triggering Universal Chart Viewer refresh');
 
     // Track upload method for consistency
     if (uploadMethod) {

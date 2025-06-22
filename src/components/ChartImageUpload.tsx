@@ -67,26 +67,53 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
   
   // Load preview URL for current image
   React.useEffect(() => {
-    console.log(`🖼️ [${imageType}] ChartImageUpload currentImage changed:`, currentImage ? `${currentImage.filename} (${currentImage.id})` : 'null');
+    console.log(`🖼️ [${imageType.toUpperCase()}] ChartImageUpload currentImage changed:`, currentImage ? `${currentImage.filename} (${currentImage.id})` : 'null');
 
     if (currentImage) {
+      console.log(`🖼️ [${imageType.toUpperCase()}] Image details:`, {
+        id: currentImage.id,
+        filename: currentImage.filename,
+        storage: currentImage.storage,
+        blobId: currentImage.blobId,
+        size: currentImage.size,
+        mimeType: currentImage.mimeType,
+        hasDataUrl: !!currentImage.dataUrl
+      });
+
       // If the image already has a dataUrl (loaded from database), use it directly
       if (currentImage.dataUrl) {
         setPreviewUrl(currentImage.dataUrl);
-        console.log(`🖼️ [${imageType}] Using existing dataUrl for preview`);
+        console.log(`✅ [${imageType.toUpperCase()}] Using existing dataUrl for preview: ${currentImage.dataUrl.substring(0, 50)}...`);
       } else {
         // Otherwise, fetch from service
-        console.log(`🖼️ [${imageType}] Fetching dataUrl from service`);
+        console.log(`🔍 [${imageType.toUpperCase()}] Fetching dataUrl from service for: ${currentImage.filename}`);
+
+        // Clear any existing error state
+        setError(null);
+
         ChartImageService.getChartImageDataUrl(currentImage).then(url => {
-          setPreviewUrl(url);
-          console.log(`🖼️ [${imageType}] Preview URL loaded from service`);
+          if (url) {
+            // Add a small delay to ensure the data URL is fully ready
+            setTimeout(() => {
+              setPreviewUrl(url);
+              console.log(`✅ [${imageType.toUpperCase()}] Preview URL loaded from service: ${url.substring(0, 50)}...`);
+            }, 100);
+          } else {
+            console.error(`❌ [${imageType.toUpperCase()}] Service returned null URL`);
+            setPreviewUrl(null);
+            setError('Failed to load image from cloud storage');
+          }
         }).catch(error => {
-          console.error(`❌ [${imageType}] Failed to load preview URL:`, error);
+          console.error(`❌ [${imageType.toUpperCase()}] Failed to load preview URL:`, {
+            message: error?.message || 'Unknown error',
+            name: error?.name || 'Error'
+          });
           setPreviewUrl(null);
+          setError('Failed to load image preview');
         });
       }
     } else {
-      console.log(`🖼️ [${imageType}] No current image, clearing preview`);
+      console.log(`🖼️ [${imageType.toUpperCase()}] No current image, clearing preview`);
       setPreviewUrl(null);
     }
   }, [currentImage, imageType]);
@@ -251,7 +278,10 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to download from URL');
-      console.error('❌ TradingView URL upload error:', error);
+      console.error('❌ TradingView URL upload error:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Error'
+      });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -300,7 +330,10 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
 
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Upload failed');
-      console.error('❌ Chart image upload error:', error);
+      console.error('❌ Chart image upload error:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Error'
+      });
     } finally {
       setIsUploading(false);
       setUploadProgress(0);
@@ -352,7 +385,10 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
         setError('Failed to delete image');
       }
     } catch (error) {
-      console.error(`❌ [${imageType}] Chart image delete error:`, error);
+      console.error(`❌ [${imageType}] Chart image delete error:`, {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        name: error instanceof Error ? error.name : 'Error'
+      });
       setError(error instanceof Error ? error.message : 'Delete failed');
     }
   }, [currentImage, tradeId, imageType, onImageDeleted, disabled, title]);
@@ -373,6 +409,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
           onPress={openFileDialog}
           isDisabled={disabled}
           className="text-gray-500 hover:text-primary-500"
+          aria-label={`Upload ${title}`}
         >
           <Icon icon={icon} className="w-4 h-4" />
           <input
@@ -381,6 +418,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
             accept={CHART_IMAGE_CONFIG.ALLOWED_TYPES.join(',')}
             onChange={handleFileInputChange}
             className="hidden"
+            aria-label={`Upload ${title} chart image file`}
           />
         </Button>
       </Tooltip>
@@ -407,6 +445,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
                 onPress={handleDelete}
                 isDisabled={disabled}
                 className="text-danger-500 hover:text-danger-600"
+                aria-label={`Delete ${title}`}
               >
                 <Icon icon="lucide:trash-2" className="w-4 h-4" />
               </Button>
@@ -427,6 +466,18 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
                 src={previewUrl}
                 alt={title}
                 className="w-full h-32 object-cover rounded-lg border border-gray-200 dark:border-gray-700"
+                onLoad={() => {
+                  console.log(`✅ [${imageType.toUpperCase()}] Image loaded successfully: ${previewUrl?.substring(0, 50)}...`);
+                }}
+                onError={(e) => {
+                  console.error(`❌ [${imageType.toUpperCase()}] Image failed to load:`, {
+                    src: previewUrl,
+                    errorType: e.type,
+                    currentImage: currentImage?.filename
+                  });
+                  // Set error state to show user-friendly message
+                  setError('Failed to load image preview');
+                }}
               />
               <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center gap-2">
                 <Button
@@ -592,6 +643,7 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
           accept={CHART_IMAGE_CONFIG.ALLOWED_TYPES.join(',')}
           onChange={handleFileInputChange}
           className="hidden"
+          aria-label={`Upload ${title} chart image file`}
         />
       </CardBody>
     </Card>

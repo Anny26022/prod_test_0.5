@@ -1,11 +1,12 @@
 import { ChartImage, ChartImageBlob } from '../types/trade';
 import { DatabaseService } from '../db/database';
 import { generateId } from './helpers';
+import { v4 as uuidv4 } from 'uuid';
 
 // Configuration constants
 export const CHART_IMAGE_CONFIG = {
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB max file size
-  INLINE_THRESHOLD: 50 * 1024, // 50KB threshold for inline vs blob storage
+  INLINE_THRESHOLD: 0, // PURE SUPABASE: No inline storage - all images go to Supabase
   COMPRESSION_QUALITY: 0.85, // JPEG compression quality (increased for better quality)
   WEBP_QUALITY: 0.8, // WebP compression quality (better compression)
   MAX_DIMENSION: 2048, // Max width/height for compression
@@ -208,7 +209,7 @@ export async function fileToBase64(file: File): Promise<string> {
 export async function createChartImage(
   file: File,
   shouldCompress: boolean = true
-): Promise<ChartImage> {
+): Promise<{ chartImage: ChartImage; processedFile: File }> {
   const validation = validateImageFile(file);
   if (!validation.isValid) {
     throw new Error(validation.error);
@@ -231,29 +232,23 @@ export async function createChartImage(
   }
 
   const dimensions = await getImageDimensions(processedFile);
-  const useInlineStorage = processedFile.size <= CHART_IMAGE_CONFIG.INLINE_THRESHOLD;
 
+  // PURE SUPABASE: Always use blob storage, no inline storage
   const chartImage: ChartImage = {
-    id: generateId(),
+    id: generateId(), // Keep using generateId for chart image ID (this is fine)
     filename: file.name,
     mimeType: processedFile.type as any,
     size: processedFile.size,
     uploadedAt: new Date(),
-    storage: useInlineStorage ? 'inline' : 'blob',
+    storage: 'blob', // Always use blob storage for Supabase
     dimensions,
     compressed,
     originalSize: compressed ? originalSize : undefined,
+    // Always use UUID for Supabase compatibility
+    blobId: uuidv4()
   };
 
-  if (useInlineStorage) {
-    // Store as base64 inline
-    chartImage.data = await fileToBase64(processedFile);
-  } else {
-    // Store as blob reference
-    chartImage.blobId = chartImage.id;
-  }
-
-  return chartImage;
+  return { chartImage, processedFile };
 }
 
 // Utility functions

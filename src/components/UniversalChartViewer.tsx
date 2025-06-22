@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChartImage } from '../types/trade';
 import { DatabaseService, ChartImageBlob } from '../db/database';
 import { formatFileSize } from '../utils/chartImageUtils';
+import { SupabaseService } from '../services/supabaseService';
+import { ChartImageService } from '../services/chartImageService';
 
 interface UniversalChartViewerProps {
   isOpen: boolean;
@@ -167,126 +169,98 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
     setLoadingProgress(0);
 
     try {
-      // Perform cleanup of orphaned chart data before loading
-      try {
-        const { ChartImageService } = await import('../services/chartImageService');
-        const cleanupResult = await ChartImageService.cleanupAllOrphanedData();
-      } catch (cleanupError) {
-        // Silent cleanup
-      }
+      // PURE SUPABASE: Load trades from Supabase (chart images are embedded in trade records)
+      const allTrades = await SupabaseService.getAllTrades();
 
-      // Load both blob storage and inline storage charts
-      const [blobImages, allTrades] = await Promise.all([
-        DatabaseService.getAllChartImageBlobsWithTradeInfo(),
-        DatabaseService.getAllTrades()
-      ]);
-
-      // Convert blob images to data URLs
+      // PURE SUPABASE: Extract chart images from trade chart attachments
       const imagesWithDataUrls: ChartImageWithContext[] = [];
       let processedCount = 0;
-      const totalItems = blobImages.length + allTrades.length;
+      const totalItems = allTrades.length;
 
-      // Process blob storage images
-      for (let i = 0; i < blobImages.length; i++) {
-        const image = blobImages[i];
-        setLoadingProgress((processedCount / totalItems) * 100);
-
-        try {
-          // Validate that the blob data exists and is valid
-          if (!image.data || image.data.size === 0) {
-            console.warn(`Skipping invalid blob image ${image.filename}: no data`);
-            processedCount++;
-            continue;
-          }
-
-          const dataUrl = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.onerror = () => reject(new Error('Failed to read blob'));
-            reader.readAsDataURL(image.data);
-          });
-
-          // Validate that the data URL was created successfully
-          if (dataUrl && dataUrl.startsWith('data:')) {
-            imagesWithDataUrls.push({
-              ...image,
-              dataUrl
-            });
-          } else {
-            console.warn(`Skipping invalid blob image ${image.filename}: invalid data URL`);
-          }
-        } catch (err) {
-          console.error(`Failed to load blob image ${image.filename}:`, err);
-        }
-        processedCount++;
-      }
-
-      // Process inline storage images from trades
+      // Process trades and extract chart attachments
       for (let i = 0; i < allTrades.length; i++) {
         const trade = allTrades[i];
         setLoadingProgress((processedCount / totalItems) * 100);
 
         try {
           if (trade.chartAttachments) {
-            // Process beforeEntry chart if it exists and uses inline storage
-            if (trade.chartAttachments.beforeEntry?.storage === 'inline' && trade.chartAttachments.beforeEntry.data) {
+            // Process beforeEntry chart
+            if (trade.chartAttachments.beforeEntry) {
               const chartImage = trade.chartAttachments.beforeEntry;
 
-              // Validate that the chart image has all required properties
-              if (chartImage.id && chartImage.filename && chartImage.mimeType && chartImage.data) {
-                const dataUrl = `data:${chartImage.mimeType};base64,${chartImage.data}`;
+              let dataUrl = chartImage.dataUrl;
 
-                imagesWithDataUrls.push({
+              // If no dataUrl, try to generate one
+              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId) {
+                dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
+              }
+
+              if (dataUrl) {
+                const imageWithContext = {
                   id: chartImage.id,
                   tradeId: trade.id,
-                  imageType: 'beforeEntry',
+                  imageType: 'beforeEntry' as const,
                   filename: chartImage.filename,
                   mimeType: chartImage.mimeType,
                   size: chartImage.size,
-                  data: new Blob(), // Not used for inline
+                  data: new Blob(),
                   uploadedAt: new Date(chartImage.uploadedAt),
                   compressed: chartImage.compressed || false,
                   originalSize: chartImage.originalSize,
                   tradeName: trade.name,
                   tradeDate: trade.date,
-                  tradeNo: Number(trade.tradeNo),
+                  tradeNo: trade.tradeNo ? Number(trade.tradeNo) : 0,
                   dataUrl
-                });
+                };
+
+                imagesWithDataUrls.push(imageWithContext);
               }
             }
 
-            // Process afterExit chart if it exists and uses inline storage
-            if (trade.chartAttachments.afterExit?.storage === 'inline' && trade.chartAttachments.afterExit.data) {
+            // Process afterExit chart
+            if (trade.chartAttachments.afterExit) {
               const chartImage = trade.chartAttachments.afterExit;
 
-              // Validate that the chart image has all required properties
-              if (chartImage.id && chartImage.filename && chartImage.mimeType && chartImage.data) {
-                const dataUrl = `data:${chartImage.mimeType};base64,${chartImage.data}`;
+              let dataUrl = chartImage.dataUrl;
 
-                imagesWithDataUrls.push({
+              // If no dataUrl, try to generate one
+              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId) {
+                dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
+              }
+
+              if (dataUrl) {
+                const imageWithContext = {
                   id: chartImage.id,
                   tradeId: trade.id,
-                  imageType: 'afterExit',
+                  imageType: 'afterExit' as const,
                   filename: chartImage.filename,
                   mimeType: chartImage.mimeType,
                   size: chartImage.size,
-                  data: new Blob(), // Not used for inline
+                  data: new Blob(),
                   uploadedAt: new Date(chartImage.uploadedAt),
                   compressed: chartImage.compressed || false,
                   originalSize: chartImage.originalSize,
                   tradeName: trade.name,
                   tradeDate: trade.date,
-                  tradeNo: Number(trade.tradeNo),
+                  tradeNo: trade.tradeNo ? Number(trade.tradeNo) : 0,
                   dataUrl
+                };
+
+                imagesWithDataUrls.push(imageWithContext);
+                console.log(`✅ [UniversalChartViewer] Added afterExit image:`, {
+                  filename: imageWithContext.filename,
+                  tradeName: imageWithContext.tradeName
                 });
               }
             }
           }
-        } catch (error) {
-          console.warn(`Failed to process chart attachments for trade ${trade.id}:`, error);
+        } catch (err) {
+          console.error(`Failed to process chart attachments for trade ${trade.name}:`, err);
         }
         processedCount++;
       }
+
+      // All chart processing is now done in the main loop above
 
 
 
@@ -314,8 +288,26 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
         return dateB - dateA;
       });
 
+      console.log(`🔍 [UniversalChartViewer] Final results:`, {
+        totalImagesProcessed: imagesWithDataUrls.length,
+        uniqueImages: sortedImages.length,
+        tradesProcessed: allTrades.length,
+        tradesWithChartAttachments: allTrades.filter(t => t.chartAttachments).length,
+        finalSortedImages: sortedImages
+      });
+
+      if (sortedImages.length === 0) {
+        console.warn(`⚠️ [UniversalChartViewer] No images found! Check:`, {
+          tradesCount: allTrades.length,
+          tradesWithChartAttachments: allTrades.filter(t => t.chartAttachments).length,
+          imagesWithDataUrlsCount: imagesWithDataUrls.length
+        });
+      }
+
       setAllImages(sortedImages);
       setLoadingProgress(100);
+
+      console.log(`✅ [UniversalChartViewer] Loading complete. Setting ${sortedImages.length} images.`);
 
       // Preload first few images
       preloadAdjacentImages(0, imagesWithDataUrls);

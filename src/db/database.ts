@@ -545,22 +545,70 @@ export class DatabaseService {
 
   static async saveChartImageBlob(imageBlob: ChartImageBlob): Promise<boolean> {
     try {
+      console.log(`💾 DatabaseService: Saving blob: ${imageBlob.filename}`);
+      console.log(`🔍 DatabaseService: Blob ID: ${imageBlob.id}`);
+      console.log(`🔍 DatabaseService: Blob data type:`, imageBlob.data?.constructor.name);
+      console.log(`🔍 DatabaseService: Blob data size:`, imageBlob.data?.size);
+      console.log(`🔍 DatabaseService: Expected size: ${imageBlob.size}`);
+
+      // Validate blob data before saving
+      if (!imageBlob.data || !(imageBlob.data instanceof Blob)) {
+        console.error(`❌ DatabaseService: Invalid blob data for ${imageBlob.filename}`);
+        return false;
+      }
+
+      if (imageBlob.data.size === 0) {
+        console.error(`❌ DatabaseService: Empty blob data for ${imageBlob.filename}`);
+        return false;
+      }
+
       await db.chartImageBlobs.put(imageBlob);
-      console.log(`📸 Saved chart image blob: ${imageBlob.filename} (${imageBlob.size} bytes)`);
+      console.log(`✅ DatabaseService: Successfully saved chart image blob: ${imageBlob.filename} (${imageBlob.size} bytes)`);
       return true;
     } catch (error) {
-      console.error('❌ Failed to save chart image blob:', error);
+      console.error('❌ DatabaseService: Failed to save chart image blob:', error);
       return false;
     }
   }
 
   static async getChartImageBlob(id: string): Promise<ChartImageBlob | null> {
     try {
+      console.log(`🔍 DatabaseService: Looking for blob with ID: ${id}`);
       const blob = await db.chartImageBlobs.get(id);
+
+      if (blob) {
+        console.log(`📦 DatabaseService: Found blob: ${blob.filename}`);
+        console.log(`🔍 DatabaseService: Blob data type:`, blob.data?.constructor.name);
+        console.log(`🔍 DatabaseService: Blob data size:`, blob.data?.size);
+        console.log(`🔍 DatabaseService: Blob MIME type:`, blob.mimeType);
+
+        // Validate the blob data
+        if (!blob.data || !(blob.data instanceof Blob)) {
+          console.error(`❌ DatabaseService: Invalid blob data for ${blob.filename}`);
+          return null;
+        }
+
+        if (blob.data.size === 0) {
+          console.error(`❌ DatabaseService: Empty blob data for ${blob.filename}`);
+          return null;
+        }
+      } else {
+        console.log(`📭 DatabaseService: No blob found with ID: ${id}`);
+      }
+
       return blob || null;
     } catch (error) {
       console.error('❌ Failed to get chart image blob:', error);
       return null;
+    }
+  }
+
+  static async getAllChartImageBlobs(): Promise<ChartImageBlob[]> {
+    try {
+      return await db.chartImageBlobs.toArray();
+    } catch (error) {
+      console.error('❌ Failed to get all chart image blobs:', error);
+      return [];
     }
   }
 

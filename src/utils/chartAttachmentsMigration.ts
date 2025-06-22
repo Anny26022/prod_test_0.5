@@ -92,12 +92,14 @@ export async function migrateToChartAttachments(): Promise<MigrationResult> {
       errors.push('Chart image blobs table is not accessible');
     }
 
-    // 5. Clean up any orphaned blobs (safety measure)
-    try {
-      await ChartImageService.cleanupOrphanedBlobs();
-    } catch (error) {
-      // Silent cleanup
-    }
+    // 5. TEMPORARILY DISABLE cleanup to debug deletion issue
+    // TODO: Re-enable after fixing the deletion problem
+    console.log('🧹 [MIGRATION] Cleanup temporarily disabled for debugging');
+    // try {
+    //   await ChartImageService.cleanupOrphanedBlobs();
+    // } catch (error) {
+    //   // Silent cleanup
+    // }
 
     // 6. Determine migration success
     const success = errors.length === 0 && processedCount === trades.length;
