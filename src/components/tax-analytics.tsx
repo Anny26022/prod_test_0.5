@@ -165,7 +165,7 @@ export const TaxAnalytics: React.FC = () => {
   // Function to load tax data for the selected year
   const loadTaxData = useCallback(async () => {
     try {
-      const yearData = await fetchTaxData(selectedYear);
+      const yearData = await fetchTaxData(parseInt(selectedYear));
       if (Object.keys(yearData).length > 0) {
         setTaxesByMonth(prev => ({ ...prev, ...yearData }));
       } else {
@@ -202,7 +202,7 @@ export const TaxAnalytics: React.FC = () => {
   // Save tax data to IndexedDB when it changes
   React.useEffect(() => {
     if (Object.keys(taxesByMonth).length > 0 && selectedYear) {
-      saveTaxData(selectedYear, taxesByMonth).then(success => {
+      saveTaxData(parseInt(selectedYear), taxesByMonth).then(success => {
         });
     }
   }, [taxesByMonth, selectedYear]);

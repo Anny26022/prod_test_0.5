@@ -495,8 +495,8 @@ export const useTrades = () => {
     }
 
     // Apply global date filter with optimized date checking
-    if (globalFilter && globalFilter !== 'all') {
-      filtered = filtered.filter(trade => isInGlobalFilter(trade, globalFilter));
+    if (globalFilter && (globalFilter as any) !== 'all') {
+      filtered = filtered.filter(trade => isInGlobalFilter(trade as any, globalFilter as any));
     }
 
     // Optimized sorting with stable sort

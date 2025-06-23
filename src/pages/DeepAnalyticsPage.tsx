@@ -219,7 +219,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                 if (exits.length > 0) {
                     // Create separate entries for each exit
                     exits.forEach((exit, index) => {
-                        const expandedTrade: Trade = {
+                        const expandedTrade: any = {
                             ...trade,
                             id: `${trade.id}_exit_${index}`, // Unique ID for each exit
                             _cashBasisExit: {
@@ -254,7 +254,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
             const tradeGroups = new Map();
             closedTrades.forEach(trade => {
                 const originalId = trade.id.split('_exit_')[0];
-                const pl = calculateTradePL(trade, true);
+                const pl = calculateTradePL(trade as any, true);
                 if (!tradeGroups.has(originalId)) {
                     tradeGroups.set(originalId, { ...trade, accountingPL: 0, exits: [] });
                 }
@@ -300,7 +300,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
         // Calculate P/L based on accounting method
         const tradesWithAccountingPL = groupedTrades.map(trade => ({
             ...trade,
-            accountingPL: useCashBasis ? trade.accountingPL : calculateTradePL(trade, useCashBasis)
+            accountingPL: useCashBasis ? (trade as any).accountingPL : calculateTradePL(trade as any, useCashBasis)
         }));
 
         const winningTrades = tradesWithAccountingPL.filter(trade => trade.accountingPL > 0);
@@ -316,14 +316,14 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
         // Calculate total positive and negative PF Impact using accounting-method-aware values
         const totalPositivePfImpact = winningTrades.reduce((sum, trade) => {
             const pfImpact = useCashBasis
-                ? (trade._cashPfImpact ?? 0)
-                : (trade._accrualPfImpact ?? trade.pfImpact ?? 0);
+                ? ((trade as any)._cashPfImpact ?? 0)
+                : ((trade as any)._accrualPfImpact ?? trade.pfImpact ?? 0);
             return sum + pfImpact;
         }, 0);
         const totalAbsoluteNegativePfImpact = losingTrades.reduce((sum, trade) => {
             const pfImpact = useCashBasis
-                ? (trade._cashPfImpact ?? 0)
-                : (trade._accrualPfImpact ?? trade.pfImpact ?? 0);
+                ? ((trade as any)._cashPfImpact ?? 0)
+                : ((trade as any)._accrualPfImpact ?? trade.pfImpact ?? 0);
             return sum + Math.abs(pfImpact);
         }, 0);
 
@@ -368,7 +368,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
             closedTrades.forEach(trade => {
                 if (trade.positionStatus === 'Closed' || trade.positionStatus === 'Partial') {
                     const originalId = trade.id.split('_exit_')[0];
-                    const exits = getExitDatesWithFallback(trade);
+                    const exits = getExitDatesWithFallback(trade as any);
 
                     if (!tradeGroups.has(originalId)) {
                         tradeGroups.set(originalId, {
@@ -390,7 +390,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                                 qty: exit.qty,
                                 price: exit.price
                             }
-                        }, true);
+                        } as any, true);
 
                         group.totalPL += partialPL;
                         group.exits.push(exit);
@@ -639,7 +639,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                 }
                 if (trade.positionStatus === 'Closed' || trade.positionStatus === 'Partial') {
                     // Include closed/partial trades that have P/L data
-                    const tradePL = calculateTradePL(trade, false); // accrual basis
+                    const tradePL = calculateTradePL(trade as any, false); // accrual basis
                     return tradePL !== 0 || trade.plRs !== 0; // Include if there's any P/L
                 }
                 return true; // Include other trades by default
@@ -653,7 +653,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
 
         const filtered = baseTrades.filter(trade => {
             try {
-                const relevantDate = getTradeDateForAccounting(trade, useCashBasis);
+                const relevantDate = getTradeDateForAccounting(trade as any, useCashBasis);
                 if (!relevantDate) {
                     return false;
                 }
@@ -675,7 +675,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
     }, [processedTrades, globalStartDate, globalEndDate, useCashBasis]);
 
     // Calculate min and max trade dates for heatmap (within filtered trades) using accounting method-aware dates
-    const tradeDates = filteredTrades.map(t => getTradeDateForAccounting(t, useCashBasis).split('T')[0]);
+    const tradeDates = filteredTrades.map(t => getTradeDateForAccounting(t as any, useCashBasis).split('T')[0]);
     const minTradeDate = tradeDates.length > 0 ? tradeDates.reduce((a, b) => a < b ? a : b) : '';
     const maxTradeDate = tradeDates.length > 0 ? tradeDates.reduce((a, b) => a > b ? a : b) : '';
 

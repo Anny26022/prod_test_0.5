@@ -27,14 +27,14 @@ export function validateTrade(trade: Trade): TradeIssue[] {
   }
 
   // 2. Pyramid quantities without prices (WARNING)
-  if ((trade.pyramid1Qty || 0) > 0 && !(trade.pyramid1Price || 0) > 0) {
+  if ((trade.pyramid1Qty || 0) > 0 && !((trade.pyramid1Price || 0) > 0)) {
     issues.push({
       type: 'warning',
       message: 'Pyramid 1 has quantity but no price specified'
     });
   }
 
-  if ((trade.pyramid2Qty || 0) > 0 && !(trade.pyramid2Price || 0) > 0) {
+  if ((trade.pyramid2Qty || 0) > 0 && !((trade.pyramid2Price || 0) > 0)) {
     issues.push({
       type: 'warning',
       message: 'Pyramid 2 has quantity but no price specified'
@@ -42,21 +42,21 @@ export function validateTrade(trade: Trade): TradeIssue[] {
   }
 
   // 3. Exit quantities without prices (WARNING)
-  if ((trade.exit1Qty || 0) > 0 && !(trade.exit1Price || 0) > 0) {
+  if ((trade.exit1Qty || 0) > 0 && !((trade.exit1Price || 0) > 0)) {
     issues.push({
       type: 'warning',
       message: 'Exit 1 has quantity but no price specified'
     });
   }
 
-  if ((trade.exit2Qty || 0) > 0 && !(trade.exit2Price || 0) > 0) {
+  if ((trade.exit2Qty || 0) > 0 && !((trade.exit2Price || 0) > 0)) {
     issues.push({
       type: 'warning',
       message: 'Exit 2 has quantity but no price specified'
     });
   }
 
-  if ((trade.exit3Qty || 0) > 0 && !(trade.exit3Price || 0) > 0) {
+  if ((trade.exit3Qty || 0) > 0 && !((trade.exit3Price || 0) > 0)) {
     issues.push({
       type: 'warning',
       message: 'Exit 3 has quantity but no price specified'

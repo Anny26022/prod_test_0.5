@@ -48,7 +48,7 @@ export const VirtualizedTable = React.memo<VirtualizedTableProps>(({
     estimateSize: () => estimateSize,
     overscan,
     // Performance optimization: use smooth scrolling
-    scrollBehavior: 'smooth'
+    // scrollBehavior: 'smooth' // Removed due to type incompatibility
   });
 
   const virtualItems = virtualizer.getVirtualItems();

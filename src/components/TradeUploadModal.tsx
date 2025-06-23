@@ -1053,40 +1053,40 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                'exit1Price', 'exit2Price', 'exit3Price'].includes(field)) {
             // Enhanced number parsing for cross-platform compatibility
             const parsedNumber = parseFlexibleNumber(value);
-            trade[field as keyof Trade] = parsedNumber;
+            (trade as any)[field] = parsedNumber;
           } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty'].includes(field)) {
             // Enhanced quantity parsing for cross-platform compatibility
             const parsedQuantity = parseFlexibleNumber(value);
-            trade[field as keyof Trade] = Math.round(parsedQuantity); // Quantities should be whole numbers
+            (trade as any)[field] = Math.round(parsedQuantity); // Quantities should be whole numbers
           } else if (field === 'buySell') {
             // Handle Buy/Sell field - normalize common variations
             const buySellValue = String(value || '').toLowerCase().trim();
             if (buySellValue === 'b' || buySellValue === 'buy' || buySellValue === 'long') {
-              trade[field as keyof Trade] = 'Buy';
+              (trade as any)[field] = 'Buy';
             } else if (buySellValue === 's' || buySellValue === 'sell' || buySellValue === 'short') {
-              trade[field as keyof Trade] = 'Sell';
+              (trade as any)[field] = 'Sell';
             } else {
-              trade[field as keyof Trade] = 'Buy'; // Default to Buy if unclear
+              (trade as any)[field] = 'Buy'; // Default to Buy if unclear
             }
           } else if (field === 'planFollowed') {
             // Handle boolean fields
             const boolValue = String(value || '').toLowerCase();
-            trade[field as keyof Trade] = boolValue === 'true' || boolValue === 'yes' || boolValue === '1';
+            (trade as any)[field] = boolValue === 'true' || boolValue === 'yes' || boolValue === '1';
           } else if (field.includes('Date') && value) {
             // Enhanced date parsing with multiple format support
             const parsedDate = parseDate(value);
-            trade[field as keyof Trade] = parsedDate || new Date().toISOString().split('T')[0];
+            (trade as any)[field] = parsedDate || new Date().toISOString().split('T')[0];
           } else if (field === 'setup') {
             // Special handling for setup field - reject numeric values
             const setupValue = String(value || '').trim();
             // If the value looks like a number (price), don't use it for setup
             if (setupValue && !(/^\d+\.?\d*$/.test(setupValue))) {
-              trade[field as keyof Trade] = setupValue;
+              (trade as any)[field] = setupValue;
             } else {
-              trade[field as keyof Trade] = ''; // Leave empty if it's a numeric value
+              (trade as any)[field] = ''; // Leave empty if it's a numeric value
             }
           } else {
-            trade[field as keyof Trade] = String(value || '');
+            (trade as any)[field] = String(value || '');
           }
         }
       });
@@ -1194,43 +1194,43 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                'exit1Price', 'exit2Price', 'exit3Price'].includes(field)) {
             // Enhanced number parsing for cross-platform compatibility
             const parsedNumber = parseFlexibleNumber(value);
-            trade[field as keyof Trade] = parsedNumber;
+            (trade as any)[field] = parsedNumber;
           } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty'].includes(field)) {
             // Enhanced quantity parsing for cross-platform compatibility
             const parsedQuantity = parseFlexibleNumber(value);
-            trade[field as keyof Trade] = Math.round(parsedQuantity); // Quantities should be whole numbers
+            (trade as any)[field] = Math.round(parsedQuantity); // Quantities should be whole numbers
           } else if (field === 'buySell') {
             // Handle Buy/Sell field - normalize common variations
             const buySellValue = String(value || '').toLowerCase().trim();
             if (buySellValue === 'b' || buySellValue === 'buy' || buySellValue === 'long') {
-              trade[field as keyof Trade] = 'Buy';
+              (trade as any)[field] = 'Buy';
             } else if (buySellValue === 's' || buySellValue === 'sell' || buySellValue === 'short') {
-              trade[field as keyof Trade] = 'Sell';
+              (trade as any)[field] = 'Sell';
             } else {
-              trade[field as keyof Trade] = 'Buy'; // Default to Buy if unclear
+              (trade as any)[field] = 'Buy'; // Default to Buy if unclear
             }
           } else if (field === 'planFollowed') {
             // Handle boolean fields
             const boolValue = String(value || '').toLowerCase();
-            trade[field as keyof Trade] = boolValue === 'true' || boolValue === 'yes' || boolValue === '1';
+            (trade as any)[field] = boolValue === 'true' || boolValue === 'yes' || boolValue === '1';
           } else if (field.includes('Date') && value) {
             // Enhanced date parsing with multiple format support
             const parsedDate = parseDate(value);
             if (!parsedDate && value) {
               dateParsingErrors.push('Row ' + (validTradeCount + skippedBlankTrades + 1) + ': Invalid date "' + value + '" in ' + field);
             }
-            trade[field as keyof Trade] = parsedDate || new Date().toISOString().split('T')[0];
+            (trade as any)[field] = parsedDate || new Date().toISOString().split('T')[0];
           } else if (field === 'setup') {
             // Special handling for setup field - reject numeric values
             const setupValue = String(value || '').trim();
             // If the value looks like a number (price), don't use it for setup
             if (setupValue && !(/^\d+\.?\d*$/.test(setupValue))) {
-              trade[field as keyof Trade] = setupValue;
+              (trade as any)[field] = setupValue;
             } else {
-              trade[field as keyof Trade] = ''; // Leave empty if it's a numeric value
+              (trade as any)[field] = ''; // Leave empty if it's a numeric value
             }
           } else {
-            trade[field as keyof Trade] = String(value || '');
+            (trade as any)[field] = String(value || '');
           }
         }
       });
@@ -1850,7 +1850,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                                     }}
                                   >
                                     {parsedData.headers.map((header) => (
-                                      <SelectItem key={header} value={header}>
+                                      <SelectItem key={header}>
                                         {header}
                                       </SelectItem>
                                     ))}

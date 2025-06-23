@@ -79,7 +79,7 @@ export const TaxSummaryChart: React.FC<TaxSummaryChartProps> = ({ taxesByMonth }
   const shortMonthOrder = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 
   // Get all monthly portfolio data (same as Monthly Performance table)
-  const monthlyPortfolios = getAllMonthlyTruePortfolios(trades, useCashBasis);
+  const monthlyPortfolios = getAllMonthlyTruePortfolios();
   const filteredMonthlyPortfolios = monthlyPortfolios.filter(mp => mp.year === currentYear);
 
   // Output months in calendar order - use same logic as Monthly Performance table
@@ -102,7 +102,7 @@ export const TaxSummaryChart: React.FC<TaxSummaryChartProps> = ({ taxesByMonth }
     const grossPL = monthPortfolio.pl; // This uses the correct accounting method
     const taxes = taxesByMonth[longMonth || ""] || 0;
     const netPL = grossPL - taxes;
-    const portfolioSize = getPortfolioSize(month, currentYear, trades, useCashBasis);
+    const portfolioSize = getPortfolioSize(month, currentYear);
     const plPercent = portfolioSize > 0 ? (grossPL / portfolioSize) * 100 : 0;
 
     return {

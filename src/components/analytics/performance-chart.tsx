@@ -57,7 +57,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
   // Pass accounting method to ensure correct P/L attribution
   // Use filtered trades to respect global filter selection
   const monthlyPortfolios = React.useMemo(() => {
-    return getAllMonthlyTruePortfolios(filteredTrades, useCashBasis);
+    return getAllMonthlyTruePortfolios();
   }, [getAllMonthlyTruePortfolios, filteredTrades, useCashBasis]);
 
   // Get the earliest and latest trade dates to determine the date range

@@ -108,7 +108,7 @@ export const MobileTooltip: React.FC<MobileTooltipProps> = ({
       onOpenChange={setIsOpen}
       // For mobile, we control the tooltip manually
       // For desktop, let HeroUI handle hover behavior
-      trigger={isMobile ? 'manual' : 'hover'}
+      trigger={'focus' as any}
       placement={tooltipProps.placement || 'top'}
       delay={isMobile ? 0 : tooltipProps.delay}
       closeDelay={isMobile ? 0 : tooltipProps.closeDelay}

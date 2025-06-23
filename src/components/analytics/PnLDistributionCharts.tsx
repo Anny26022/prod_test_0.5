@@ -27,7 +27,7 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
         // Convert to array and sort by PnL descending
         return Object.entries(pnlBySymbol)
             .map(([symbol, pnl]) => ({ symbol, pnl }))
-            .sort((a, b) => b.pnl - a.pnl)
+            .sort((a, b) => (b.pnl as number) - (a.pnl as number))
             .slice(0, 10); // Top 10 symbols
     }, [tradesWithAccountingPL]);
 
@@ -182,7 +182,7 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
                                         {symbolPnLData.map((entry, index) => (
                                             <Cell
                                                 key={`cell-${index}`}
-                                                fill={getBarColor(entry.pnl)}
+                                                fill={getBarColor(entry.pnl as number)}
                                                 fillOpacity={0.9}
                                             />
                                         ))}

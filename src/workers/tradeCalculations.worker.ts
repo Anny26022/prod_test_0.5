@@ -84,12 +84,12 @@ const calculateTradeMetrics = (trade: Trade, portfolioSize: number): Partial<Tra
   // Calculate unrealized P&L for open positions
   const openQty = calculations.openQty || 0;
   if (openQty > 0 && cmp > 0) {
-    calculations.unrealizedPL = (cmp - avgEntry) * openQty;
+    (calculations as any).unrealizedPL = (cmp - avgEntry) * openQty;
   }
 
   // Calculate total P&L
   const realised = calculations.realisedAmount || 0;
-  const unrealised = calculations.unrealizedPL || 0;
+  const unrealised = (calculations as any).unrealizedPL || 0;
   calculations.plRs = realised + unrealised;
 
   // Calculate portfolio impact

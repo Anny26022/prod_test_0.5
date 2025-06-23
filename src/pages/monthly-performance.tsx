@@ -59,7 +59,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
   // Removed debug console.log to prevent unnecessary re-renders
 
   // Get all monthly portfolio data
-  const monthlyPortfolios = getAllMonthlyTruePortfolios(trades, useCashBasis);
+  const monthlyPortfolios = getAllMonthlyTruePortfolios();
   const [yearlyStartingCapital, setYearlyStartingCapitalState] = React.useState(portfolioSize);
 
   // Inline editing state
@@ -174,7 +174,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
 
     // For months with no trades, show '-' for most stats and set finalCapital to 0
     // Use the starting capital from monthPortfolio which includes the net deposits/withdrawals
-    const adjustedStartingCapital = monthPortfolio.startingCapital || getPortfolioSize(month, selectedYear, trades, useCashBasis);
+    const adjustedStartingCapital = monthPortfolio.startingCapital || getPortfolioSize(month, selectedYear);
 
     // Check if there's any P/L for this month (regardless of trade count)
     // This is important for Cash Basis where P/L might exist without trades initiated in this month
@@ -362,7 +362,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
     });
 
     // Get the current portfolio size for this month
-    const currentPortfolioSize = getPortfolioSize(month, year, trades, useCashBasis);
+    const currentPortfolioSize = getPortfolioSize(month, year);
 
     if (existingChange) {
       // Calculate the difference to adjust the portfolio size

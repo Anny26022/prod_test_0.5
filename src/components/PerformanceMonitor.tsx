@@ -87,7 +87,7 @@ export const PerformanceMonitor: React.FC<PerformanceMonitorProps> = ({
     const measureLoadTime = () => {
       if ('navigation' in performance) {
         const navTiming = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
-        const loadTime = Math.round(navTiming.loadEventEnd - navTiming.navigationStart);
+        const loadTime = Math.round(navTiming.loadEventEnd - (navTiming as any).navigationStart);
         setMetrics(prev => ({ ...prev, loadTime }));
       }
     };

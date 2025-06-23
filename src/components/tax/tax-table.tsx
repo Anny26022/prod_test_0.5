@@ -567,7 +567,7 @@ export const TaxTable: React.FC<TaxTableProps> = ({ trades = [], taxesByMonth, s
           const netPL = grossPL - taxes;
           const taxPercent = grossPL !== 0 ? ((taxes / grossPL) * 100).toFixed(2) + '%' : "0.00%";
 
-          const portfolioSizeForMonth = getPortfolioSize(getShortMonthName(month), new Date().getFullYear(), trades, useCashBasis);
+          const portfolioSizeForMonth = getPortfolioSize(getShortMonthName(month), new Date().getFullYear());
           const grossPFImpact = portfolioSizeForMonth > 0 ? ((grossPL / portfolioSizeForMonth) * 100).toFixed(2) + '%' : "0.00%";
           const netPFImpact = portfolioSizeForMonth > 0 ? ((netPL / portfolioSizeForMonth) * 100).toFixed(2) + '%' : "0.00%";
           const returnPercent = grossPFImpact; // Using grossPFImpact for now

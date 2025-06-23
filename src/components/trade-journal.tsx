@@ -539,7 +539,7 @@ export const TradeJournal = React.memo(function TradeJournal({
       setIsUploadOnlyMode(false);
       setIsActionsEditMode(false); // Reset actions edit mode when modal closes
     }
-    onEditOpenChange(isOpen);
+    onEditOpenChange();
   };
 
   const handleDelete = (trade: Trade) => {
@@ -3167,15 +3167,15 @@ export const TradeJournal = React.memo(function TradeJournal({
             >
               {(memoizedRow) => (
                 <TableRow
-                  key={memoizedRow.key}
+                  key={(memoizedRow as any).key}
                   className="trade-table-row hover:bg-default-50 dark:hover:bg-gray-800 dark:bg-gray-900 group gpu-accelerated"
                 >
                   {headerColumns.map((column) => (
                     <TableCell
-                      key={`${memoizedRow.id}-${column.key}`}
+                      key={`${(memoizedRow as any).id}-${column.key}`}
                       className={`trade-table-cell ${column.key === "name" ? "sticky-name-cell sticky-header" : ""}`}
                     >
-                      {renderCell(memoizedRow.data, column.key)}
+                      {renderCell((memoizedRow as any).data, column.key)}
                     </TableCell>
                   ))}
                 </TableRow>

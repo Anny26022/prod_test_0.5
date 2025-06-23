@@ -753,9 +753,9 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                         placeholder="Type"
                         aria-label="Filter by chart type"
                       >
-                        <SelectItem key="all" value="all">All</SelectItem>
-                        <SelectItem key="beforeEntry" value="beforeEntry">Entry</SelectItem>
-                        <SelectItem key="afterExit" value="afterExit">Exit</SelectItem>
+                        <SelectItem key="all">All</SelectItem>
+                        <SelectItem key="beforeEntry">Entry</SelectItem>
+                        <SelectItem key="afterExit">Exit</SelectItem>
                       </Select>
 
                       {/* Outcome */}
@@ -771,10 +771,10 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                         placeholder="Outcome"
                         aria-label="Filter by trade outcome"
                       >
-                        <SelectItem key="all" value="all">All</SelectItem>
-                        <SelectItem key="win" value="win">Win</SelectItem>
-                        <SelectItem key="loss" value="loss">Loss</SelectItem>
-                        <SelectItem key="breakeven" value="breakeven">Breakeven</SelectItem>
+                        <SelectItem key="all">All</SelectItem>
+                        <SelectItem key="win">Win</SelectItem>
+                        <SelectItem key="loss">Loss</SelectItem>
+                        <SelectItem key="breakeven">Breakeven</SelectItem>
                       </Select>
 
                       {/* Setup */}
@@ -790,10 +790,10 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                         placeholder="Setup"
                         aria-label="Filter by trade setup"
                       >
-                        <SelectItem key="all" value="all">All</SelectItem>
-                        {uniqueSetups.map((setup) => (
-                          <SelectItem key={setup} value={setup}>{setup}</SelectItem>
-                        ))}
+                        <SelectItem key="all">All</SelectItem>
+                        {(uniqueSetups as any).map((setup: string) =>
+                          <SelectItem key={setup}>{setup}</SelectItem>
+                        )}
                       </Select>
 
                       {/* From Date */}

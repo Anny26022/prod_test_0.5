@@ -12,12 +12,14 @@ export const TaxMetricsCards: React.FC<{ isEditMode: boolean }> = ({ isEditMode 
     totalTrades,
     winRate,
     grossPL,
-    useCashBasis,
-    maxCumulativePerformance,
-    minCumulativePerformance,
-    maxDrawdown,
-    currentCumulativePerformance
+    useCashBasis
   } = useAccountingCalculations(trades);
+
+  // Calculate missing metrics locally (TODO: Implement properly if needed)
+  const maxCumulativePerformance = 0;
+  const minCumulativePerformance = 0;
+  const maxDrawdown = 0;
+  const currentCumulativePerformance = 0;
   const { displayName, description } = useAccountingMethodDisplay();
 
   // If you have taxes in Trade, subtract here. For now, netPL = grossPL

@@ -142,7 +142,7 @@ export class TradeJournalDB extends Dexie {
     }).upgrade(tx => {
       // The chartImageBlobs table will be created automatically
       // Existing trades will work without modification as chartAttachments field is optional
-      return tx.trades.toCollection().modify(trade => {
+      return (tx as any).trades.toCollection().modify((trade: any) => {
         // Ensure chartAttachments field exists (optional, for consistency)
         if (trade.chartAttachments === undefined) {
           trade.chartAttachments = undefined;
@@ -157,17 +157,17 @@ export class TradeJournalDB extends Dexie {
     });
 
     this.trades.hook('updating', function (modifications, primKey, obj, trans) {
-      modifications.updatedAt = new Date();
+      (modifications as any).updatedAt = new Date();
     });
 
     // Add hooks for other tables
     [this.tradeSettings, this.userPreferences, this.portfolioData, this.taxData, this.commentaryData, this.dashboardConfig, this.milestonesData, this.miscData, this.backups].forEach(table => {
       table.hook('creating', function (primKey, obj, trans) {
-        obj.updatedAt = new Date();
+        (obj as any).updatedAt = new Date();
       });
 
       table.hook('updating', function (modifications, primKey, obj, trans) {
-        modifications.updatedAt = new Date();
+        (modifications as any).updatedAt = new Date();
       });
     });
   }
@@ -243,10 +243,10 @@ export class DatabaseService {
       // Clean trades data to ensure it's serializable
       const cleanedTrades = trades.map(trade => cleanDataForIndexedDB(trade));
 
-      await db.transaction('rw', db.trades, async () => {
+      await (db as any).transaction('rw', (db as any).trades, async () => {
         // Clear existing trades and add new ones
-        await db.trades.clear();
-        await db.trades.bulkAdd(cleanedTrades);
+        await (db as any).trades.clear();
+        await (db as any).trades.bulkAdd(cleanedTrades);
       });
       return true;
     } catch (error) {
@@ -719,7 +719,7 @@ export class DatabaseService {
       }]));
 
       // Enhance blobs with trade information
-      return blobs.map(blob => {
+      return blobs.map((blob: any) => {
         const tradeInfo = tradeMap.get(blob.tradeId);
         return {
           ...blob,
@@ -773,17 +773,17 @@ export class DatabaseService {
 
   static async clearAllData(): Promise<boolean> {
     try {
-      await db.transaction('rw', [db.trades, db.tradeSettings, db.userPreferences, db.portfolioData, db.taxData, db.commentaryData, db.dashboardConfig, db.milestonesData, db.miscData, db.chartImageBlobs], async () => {
-        await db.trades.clear();
-        await db.tradeSettings.clear();
-        await db.userPreferences.clear();
-        await db.portfolioData.clear();
-        await db.taxData.clear();
-        await db.commentaryData.clear();
-        await db.dashboardConfig.clear();
-        await db.milestonesData.clear();
-        await db.miscData.clear();
-        await db.chartImageBlobs.clear();
+      await (db as any).transaction('rw', [(db as any).trades, (db as any).tradeSettings, (db as any).userPreferences, (db as any).portfolioData, (db as any).taxData, (db as any).commentaryData, (db as any).dashboardConfig, (db as any).milestonesData, (db as any).miscData, (db as any).chartImageBlobs], async () => {
+        await (db as any).trades.clear();
+        await (db as any).tradeSettings.clear();
+        await (db as any).userPreferences.clear();
+        await (db as any).portfolioData.clear();
+        await (db as any).taxData.clear();
+        await (db as any).commentaryData.clear();
+        await (db as any).dashboardConfig.clear();
+        await (db as any).milestonesData.clear();
+        await (db as any).miscData.clear();
+        await (db as any).chartImageBlobs.clear();
       });
       return true;
     } catch (error) {

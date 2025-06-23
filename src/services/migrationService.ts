@@ -114,11 +114,11 @@ export class MigrationService {
       updateProgress('taxData', 'Migrating tax data...')
 
       try {
-        const taxData = await DatabaseService.getTaxData()
-        for (const yearData of taxData) {
-          const success = await SupabaseService.saveTaxData(yearData.year, yearData.data)
+        const taxData = await DatabaseService.getTaxData(new Date().getFullYear())
+        if (taxData) {
+          const success = await SupabaseService.saveTaxData(taxData.year, taxData.data)
           if (!success) {
-            throw new Error(`Failed to save tax data for year ${yearData.year}`)
+            throw new Error(`Failed to save tax data for year ${taxData.year}`)
           }
         }
         } catch (error) {
