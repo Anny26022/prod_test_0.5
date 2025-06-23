@@ -263,7 +263,7 @@ export const usePerformanceMonitor = () => {
     return Math.round(measure.duration);
   };
 
-  const measureAsync = async <T>(label: string, asyncFn: () => Promise<T>): Promise<T> => {
+  const measureAsync = async <T,>(label: string, asyncFn: () => Promise<T>): Promise<T> => {
     startTiming(label);
     try {
       const result = await asyncFn();

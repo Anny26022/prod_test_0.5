@@ -19,6 +19,7 @@ import { useAccountingMethod } from "../../context/AccountingMethodContext";
 import { useGlobalFilter } from "../../context/GlobalFilterContext";
 import { isTradeInGlobalFilter } from "../../utils/dateFilterUtils";
 import { useTruePortfolioWithTrades } from "../../hooks/use-true-portfolio-with-trades";
+import { useAccountingCalculations } from "../../hooks/use-accounting-calculations";
 
 export interface DrawdownDataPoint {
   month: string;
@@ -43,8 +44,13 @@ export const DrawdownCurve: React.FC<DrawdownCurveProps> = ({ trades, className 
   const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false);
   const [selectedPeriod, setSelectedPeriod] = React.useState("YTD");
 
-  // Get portfolio data using the existing hook
-  const { monthlyPortfolios } = useTruePortfolioWithTrades(trades);
+  // CRITICAL FIX: Use the same data source as main dashboard
+  // Get portfolio data using the same hook as the main dashboard
+  const { getAllMonthlyTruePortfolios } = useTruePortfolioWithTrades(trades);
+  const monthlyPortfolios = getAllMonthlyTruePortfolios();
+
+  // Also get the same accounting calculations as the main dashboard
+  const { tradesWithAccountingPL, totalTrades, grossPL } = useAccountingCalculations(trades);
 
   // Filter trades based on global filter and accounting method
   const filteredTrades = React.useMemo(() => {
@@ -221,7 +227,20 @@ export const DrawdownCurve: React.FC<DrawdownCurveProps> = ({ trades, className 
           <div className="flex flex-col items-center justify-center h-[280px] text-center">
             <Icon icon="lucide:bar-chart-3" className="w-12 h-12 text-default-300 mb-3" />
             <p className="text-default-500 text-sm">No data available for drawdown analysis</p>
-            <p className="text-default-400 text-xs mt-1">Add some trades to see risk metrics</p>
+            <p className="text-default-400 text-xs mt-1">
+              {totalTrades > 0
+                ? `${totalTrades} trades found, but no monthly portfolio data available`
+                : "Add some trades to see risk metrics"
+              }
+            </p>
+            {/* Debug info to show connection to main dashboard */}
+            <div className="mt-3 p-2 bg-default-100 rounded text-xs text-left">
+              <p><strong>Debug Info:</strong></p>
+              <p>• Total Trades: {totalTrades}</p>
+              <p>• Gross P/L: ₹{grossPL.toFixed(2)}</p>
+              <p>• Monthly Portfolios: {monthlyPortfolios?.length || 0}</p>
+              <p>• Accounting: {useCashBasis ? 'Cash' : 'Accrual'}</p>
+            </div>
           </div>
         </CardBody>
       </Card>

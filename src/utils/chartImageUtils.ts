@@ -1,4 +1,5 @@
-import { ChartImage, ChartImageBlob } from '../types/trade';
+import { ChartImage } from '../types/trade';
+import { ChartImageBlob } from '../db/database';
 import { DatabaseService } from '../db/database';
 import { generateId } from './helpers';
 import { v4 as uuidv4 } from 'uuid';

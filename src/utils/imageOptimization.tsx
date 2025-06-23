@@ -1,4 +1,5 @@
 // High-performance image optimization utilities for Nexus Trading Journal
+import React from 'react';
 
 interface ImageCompressionOptions {
   maxWidth?: number;

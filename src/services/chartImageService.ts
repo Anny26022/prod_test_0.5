@@ -1,4 +1,5 @@
-import { ChartImage, ChartImageBlob, TradeChartAttachments } from '../types/trade';
+import { ChartImage, TradeChartAttachments } from '../types/trade';
+import { ChartImageBlob } from '../db/database';
 import { DatabaseService } from '../db/database';
 import { SupabaseService } from './supabaseService';
 import { AuthService } from './authService';
