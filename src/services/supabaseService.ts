@@ -175,7 +175,13 @@ const tradeToDbRow = (trade: Trade, userId: string) => {
 export class SupabaseService {
   // ===== TRADES =====
   
+  // Performance cache for trades
+  private static tradesCache = new Map<string, { data: Trade[], timestamp: number }>();
+  private static CACHE_DURATION = 30000; // 30 seconds
+
   static async getAllTrades(): Promise<Trade[]> {
+    const startTime = performance.now();
+
     try {
       const userId = await AuthService.getUserId()
       if (!userId) {
@@ -183,18 +189,61 @@ export class SupabaseService {
         return []
       }
 
+      // Check cache first for lightning-fast subsequent loads
+      const cacheKey = `trades_${userId}`;
+      const cached = this.tradesCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+        console.log(`⚡ Trades loaded from cache in ${Math.round(performance.now() - startTime)}ms`);
+        return cached.data;
+      }
+
+      // Complete query with all required fields matching database schema
       const { data, error } = await supabase
         .from('trades')
-        .select('*')
+        .select(`
+          id, user_id, trade_no, name, date, entry, avg_entry, sl, tsl, buy_sell, cmp,
+          setup, base_duration, initial_qty,
+          pyramid1_price, pyramid1_qty, pyramid1_date,
+          pyramid2_price, pyramid2_qty, pyramid2_date,
+          position_size, allocation, sl_percent,
+          exit1_price, exit1_qty, exit1_date,
+          exit2_price, exit2_qty, exit2_date,
+          exit3_price, exit3_qty, exit3_date,
+          open_qty, exited_qty, avg_exit_price, stock_move, reward_risk, holding_days,
+          position_status, realised_amount, pl_rs, pf_impact, cumm_pf,
+          plan_followed, exit_trigger, proficiency_growth_areas, sector, open_heat,
+          notes, chart_attachments, user_edited_fields, cmp_auto_fetched, needs_recalculation,
+          created_at, updated_at
+        `)
         .eq('user_id', userId)
         .order('trade_no', { ascending: true })
 
       if (error) throw error
 
-      return data.map(dbRowToTrade)
+      const trades = data.map(dbRowToTrade);
+
+      // Cache the result for future requests
+      this.tradesCache.set(cacheKey, {
+        data: trades,
+        timestamp: Date.now()
+      });
+
+      const endTime = performance.now();
+      console.log(`⚡ Trades loaded from Supabase in ${Math.round(endTime - startTime)}ms`);
+
+      return trades;
     } catch (error) {
       console.error('❌ Failed to get trades from Supabase:', error)
       return []
+    }
+  }
+
+  // Clear cache when trades are updated
+  static clearTradesCache(userId?: string): void {
+    if (userId) {
+      this.tradesCache.delete(`trades_${userId}`);
+    } else {
+      this.tradesCache.clear();
     }
   }
 
@@ -258,9 +307,11 @@ export class SupabaseService {
     try {
       const userId = await AuthService.getUserId()
       if (!userId) {
-        // User not authenticated - return false silently for guest mode
+        console.warn('⚠️ Cannot save trade - user not authenticated')
         return false
       }
+
+      console.log('💾 Saving trade to Supabase:', trade.name, 'User ID:', userId)
 
       const dbRow = tradeToDbRow(trade, userId)
       const uuid = dbRow.id
@@ -275,21 +326,34 @@ export class SupabaseService {
 
       if (existingTrade) {
         // Update existing trade
+        console.log('🔄 Updating existing trade:', trade.name)
         const { error } = await supabase
           .from('trades')
           .update(dbRow)
           .eq('id', uuid)
           .eq('user_id', userId)
 
-        if (error) throw error
+        if (error) {
+          console.error('❌ Error updating trade:', error)
+          throw error
+        }
+        console.log('✅ Trade updated successfully:', trade.name)
       } else {
         // Insert new trade
+        console.log('➕ Inserting new trade:', trade.name)
         const { error } = await supabase
           .from('trades')
           .insert(dbRow)
 
-        if (error) throw error
+        if (error) {
+          console.error('❌ Error inserting trade:', error)
+          throw error
+        }
+        console.log('✅ Trade inserted successfully:', trade.name)
       }
+
+      // Clear cache after successful save
+      this.clearTradesCache(userId)
 
       return true
     } catch (error) {
@@ -301,30 +365,56 @@ export class SupabaseService {
   static async saveAllTrades(trades: Trade[]): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        console.warn('⚠️ Cannot save trades - user not authenticated')
+        return false
+      }
+
+      console.log(`💾 Saving ${trades.length} trades to Supabase for user:`, userId)
 
       // Delete all existing trades for the user
+      console.log('🗑️ Clearing existing trades...')
       const { error: deleteError } = await supabase
         .from('trades')
         .delete()
         .eq('user_id', userId)
 
-      if (deleteError) throw deleteError
+      if (deleteError) {
+        console.error('❌ Error deleting existing trades:', deleteError)
+        throw deleteError
+      }
+      console.log('✅ Existing trades cleared')
+
+      if (trades.length === 0) {
+        console.log('ℹ️ No trades to save')
+        this.clearTradesCache(userId)
+        return true
+      }
 
       // Convert all trades to database format with UUID conversion
       const dbRows = trades.map(trade => tradeToDbRow(trade, userId))
+      console.log('📝 Converted trades to DB format:', dbRows.length)
 
       // Insert all new trades in batches to avoid payload size limits
       const batchSize = 100
       for (let i = 0; i < dbRows.length; i += batchSize) {
         const batch = dbRows.slice(i, i + batchSize)
+        console.log(`📤 Inserting batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(dbRows.length/batchSize)} (${batch.length} trades)`)
+
         const { error: insertError } = await supabase
           .from('trades')
           .insert(batch)
 
-        if (insertError) throw insertError
+        if (insertError) {
+          console.error('❌ Error inserting batch:', insertError)
+          throw insertError
+        }
       }
 
+      console.log('✅ All trades saved successfully to Supabase')
+
+      // Clear cache after successful save
+      this.clearTradesCache(userId)
 
       return true
     } catch (error) {
@@ -617,15 +707,21 @@ export class SupabaseService {
         return null
       }
 
+      console.log('🔍 Getting misc data for key:', key, 'user:', userId)
+
       const { data, error } = await supabase
         .from('misc_data')
         .select('value')
         .eq('user_id', userId)
         .eq('key', key)
-        .single()
+        .maybeSingle() // Use maybeSingle instead of single to avoid errors when no data exists
 
-      if (error && error.code !== 'PGRST116') throw error
+      if (error) {
+        console.error('❌ Error getting misc data:', error)
+        throw error
+      }
 
+      console.log('✅ Got misc data:', data?.value || 'null')
       return data?.value || null
     } catch (error) {
       console.error('❌ Failed to get misc data from Supabase:', error)

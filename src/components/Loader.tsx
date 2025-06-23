@@ -2,13 +2,30 @@ import React from "react";
 import { Spinner } from "@heroui/react";
 import { motion } from "framer-motion";
 
-export const Loader: React.FC = () => {
+interface LoaderProps {
+  size?: 'sm' | 'md' | 'lg';
+  message?: string;
+  fullScreen?: boolean;
+  className?: string;
+}
+
+// High-performance loader component with GPU acceleration
+export const Loader: React.FC<LoaderProps> = React.memo(({
+  size = 'md',
+  message = 'Loading...',
+  fullScreen = false,
+  className = ''
+}) => {
+  const containerClasses = fullScreen
+    ? 'fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm gpu-accelerated'
+    : 'flex flex-col items-center justify-center min-h-[200px] gpu-accelerated';
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, ease: "easeOut" }}
-      className="flex flex-col items-center justify-center min-h-[200px]"
+      className={`${containerClasses} ${className}`}
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
@@ -16,11 +33,11 @@ export const Loader: React.FC = () => {
         transition={{ duration: 0.4, delay: 0.1 }}
         className="mb-4"
       >
-        <div className="relative">
+        <div className="relative gpu-accelerated">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-            className="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full"
+            className="w-10 h-10 border-2 border-foreground/20 border-t-foreground rounded-full loading-spinner"
           />
           <motion.div
             animate={{
@@ -32,7 +49,7 @@ export const Loader: React.FC = () => {
               repeat: Infinity,
               ease: "easeInOut"
             }}
-            className="absolute inset-0 w-10 h-10 border border-foreground/10 rounded-full"
+            className="absolute inset-0 w-10 h-10 border border-foreground/10 rounded-full gpu-accelerated"
           />
         </div>
       </motion.div>
@@ -42,12 +59,12 @@ export const Loader: React.FC = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, delay: 0.2 }}
       >
-        <p className="text-sm font-medium text-foreground/80 mb-2 font-sans">Loading...</p>
+        <p className="text-sm font-medium text-foreground/80 mb-2 font-sans optimized-text">{message}</p>
         <div className="flex items-center justify-center gap-1">
           {[0, 1, 2].map((i) => (
             <motion.div
               key={i}
-              className="w-1 h-1 bg-foreground rounded-full"
+              className="w-1 h-1 bg-foreground rounded-full gpu-accelerated"
               animate={{
                 scale: [1, 1.4, 1],
                 opacity: [0.4, 1, 0.4],
@@ -65,4 +82,6 @@ export const Loader: React.FC = () => {
       </motion.div>
     </motion.div>
   );
-};
+});
+
+Loader.displayName = 'Loader';

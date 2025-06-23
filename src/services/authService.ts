@@ -53,18 +53,24 @@ export class AuthService {
    */
   static async signIn({ email, password }: SignInData) {
     try {
+      console.log('🔐 Attempting sign in for email:', email)
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       })
 
       if (error) {
+        console.error('❌ Sign in error:', error.message)
         throw error
       }
 
+      console.log('✅ Sign in successful for user:', data.user?.email)
       return { data, error: null }
     } catch (error) {
-      return { data: null, error: error as AuthError }
+      const authError = error as AuthError
+      console.error('❌ Sign in failed:', authError.message)
+      return { data: null, error: authError }
     }
   }
 
@@ -285,7 +291,15 @@ export class AuthService {
    */
   static async getUserId(): Promise<string | null> {
     const { user } = await this.getCurrentUser()
-    return user?.id || null
+    const userId = user?.id || null
+
+    if (userId) {
+      console.log('🔐 User authenticated with ID:', userId)
+    } else {
+      console.log('❌ No authenticated user found')
+    }
+
+    return userId
   }
 
   /**
@@ -343,6 +357,8 @@ export const getAuthState = async (): Promise<AuthState> => {
 export const getAuthErrorMessage = (error: AuthError | null): string => {
   if (!error) return ''
 
+  console.log('🔍 Processing auth error:', error.message)
+
   switch (error.message) {
     case 'Invalid login credentials':
       return 'INVALID_CREDENTIALS'
@@ -360,13 +376,25 @@ export const getAuthErrorMessage = (error: AuthError | null): string => {
       return 'New user registration is currently disabled.'
     case 'For security purposes, you can only request this once every 60 seconds':
       return 'Please wait 60 seconds before requesting another verification email.'
+    case 'Auth session missing!':
+      return 'SESSION_MISSING'
     default:
+      // Check for specific error patterns
+      if (error.message.toLowerCase().includes('invalid login') ||
+          error.message.toLowerCase().includes('invalid credentials') ||
+          error.message.toLowerCase().includes('wrong password') ||
+          error.message.toLowerCase().includes('incorrect password')) {
+        return 'INVALID_CREDENTIALS'
+      }
+
       // Check for email confirmation related errors
       if (error.message.toLowerCase().includes('confirm') ||
           error.message.toLowerCase().includes('verify') ||
           error.message.toLowerCase().includes('email')) {
         return 'EMAIL_NOT_CONFIRMED'
       }
+
+      console.log('⚠️ Unhandled auth error:', error.message)
       return error.message || 'An unexpected error occurred. Please try again.'
   }
 }

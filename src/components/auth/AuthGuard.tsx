@@ -12,15 +12,24 @@ interface AuthGuardProps {
 }
 
 export const AuthGuard: React.FC<AuthGuardProps> = ({ children, fallback }) => {
-  const { user, session, loading } = useAuth()
+  const { user, session, loading, error } = useAuth()
   const [mounted, setMounted] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [isGuestMode, setIsGuestMode] = useState(false)
+  const [authError, setAuthError] = useState<string | null>(null)
 
   // Track when component is mounted
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Handle authentication errors
+  useEffect(() => {
+    if (error) {
+      console.log('🔐 AuthGuard detected auth error:', error)
+      setAuthError(error)
+    }
+  }, [error])
 
   // Show loading spinner while checking authentication
   if (!mounted || loading) {

@@ -43,9 +43,12 @@ async function getTradesFromSupabase(): Promise<Trade[]> {
   if (typeof window === 'undefined') return []; // In a server-side environment, return empty array
 
   try {
+    console.log('📥 Loading trades from Supabase...')
     const trades = await SupabaseService.getAllTrades();
+    console.log(`✅ Loaded ${trades.length} trades from Supabase`)
     return trades;
   } catch (error) {
+    console.error('❌ Error loading trades from Supabase:', error)
     return []; // Always return empty array on error to prevent mock data
   }
 }
@@ -54,9 +57,18 @@ async function saveTradesToSupabase(trades: Trade[]): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
   try {
+    console.log('🚀 Attempting to save trades to Supabase:', trades.length)
     const success = await SupabaseService.saveAllTrades(trades);
+
+    if (success) {
+      console.log('✅ Trades saved successfully to Supabase')
+    } else {
+      console.error('❌ Failed to save trades to Supabase')
+    }
+
     return success;
   } catch (error) {
+    console.error('❌ Error in saveTradesToSupabase:', error)
     return false;
   }
 }
@@ -445,6 +457,84 @@ export const useTrades = () => {
     return recalculateAllTrades(tradesToRecalculate, stableGetPortfolioSize, useCashBasis, skipExpensiveCalculations);
   }, [stableGetPortfolioSize, useCashBasis]);
 
+  // Performance optimization: Cache expensive calculations
+  const calculationCache = React.useRef(new Map<string, any>());
+  const lastCalculationHash = React.useRef<string>('');
+
+  // PERFORMANCE OPTIMIZATION: Smart memoization with incremental updates
+  const processedTrades = React.useMemo(() => {
+    const startTime = performance.now();
+
+    // Create a lightweight hash for change detection
+    const currentHash = `${trades.length}-${searchQuery}-${statusFilter}-${sortDescriptor.column}-${sortDescriptor.direction}-${globalFilter}-${accountingMethod}`;
+
+    // Return cached result if nothing changed
+    if (currentHash === lastCalculationHash.current && calculationCache.current.has('processedTrades')) {
+      const cached = calculationCache.current.get('processedTrades');
+      console.log(`⚡ Processed trades from cache in ${Math.round(performance.now() - startTime)}ms`);
+      return cached;
+    }
+
+    let filtered = trades;
+
+    // Optimized search filter with early termination
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(trade => {
+        // Check most common fields first for early termination
+        return trade.name?.toLowerCase().includes(query) ||
+               trade.tradeNo?.toLowerCase().includes(query) ||
+               trade.setup?.toLowerCase().includes(query) ||
+               trade.notes?.toLowerCase().includes(query);
+      });
+    }
+
+    // Apply status filter (most selective first)
+    if (statusFilter) {
+      filtered = filtered.filter(trade => trade.positionStatus === statusFilter);
+    }
+
+    // Apply global date filter with optimized date checking
+    if (globalFilter && globalFilter !== 'all') {
+      filtered = filtered.filter(trade => isInGlobalFilter(trade, globalFilter));
+    }
+
+    // Optimized sorting with stable sort
+    if (sortDescriptor.column) {
+      const column = sortDescriptor.column as keyof Trade;
+      const isDescending = sortDescriptor.direction === 'descending';
+
+      filtered = [...filtered].sort((a, b) => {
+        const aValue = a[column];
+        const bValue = b[column];
+
+        // Handle null/undefined values
+        if (aValue == null && bValue == null) return 0;
+        if (aValue == null) return isDescending ? 1 : -1;
+        if (bValue == null) return isDescending ? -1 : 1;
+
+        // Optimized comparison
+        let result = 0;
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+          result = aValue - bValue;
+        } else {
+          result = String(aValue).localeCompare(String(bValue));
+        }
+
+        return isDescending ? -result : result;
+      });
+    }
+
+    // Cache the result
+    calculationCache.current.set('processedTrades', filtered);
+    lastCalculationHash.current = currentHash;
+
+    const endTime = performance.now();
+    console.log(`⚡ Processed ${filtered.length} trades in ${Math.round(endTime - startTime)}ms`);
+
+    return filtered;
+  }, [trades, searchQuery, statusFilter, sortDescriptor, globalFilter, accountingMethod]);
+
   // Memory usage monitor
   React.useEffect(() => {
     const checkMemoryUsage = () => {
@@ -472,41 +562,77 @@ export const useTrades = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // Load from IndexedDB on mount with migration support
+  // Performance optimization: Cache for expensive calculations
+  const tradesCache = React.useRef(new Map<string, Trade[]>());
+  const settingsCache = React.useRef<any>(null);
+  const lastLoadTime = React.useRef<number>(0);
+
+  // Load from Supabase with aggressive caching and background processing
   React.useEffect(() => {
     const loadData = async () => {
+      const startTime = performance.now();
+
+      // Check if we have recent cached data (within 30 seconds)
+      const now = Date.now();
+      if (now - lastLoadTime.current < 30000 && tradesCache.current.has('trades')) {
+        const cachedTrades = tradesCache.current.get('trades')!;
+        setTrades(cachedTrades);
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
 
       try {
-        // Migration is now handled by the MigrationModal component
-        // No need for automatic migration checks here
+        // Load data in parallel for maximum speed
+        const [loadedTrades, settings] = await Promise.all([
+          getTradesFromSupabase(),
+          settingsCache.current || getTradeSettings()
+        ]);
 
-        // Load trades from Supabase
-        const loadedTrades = await getTradesFromSupabase();
-        const settings = await getTradeSettings();
+        // Cache settings for future use
+        if (settings) {
+          settingsCache.current = settings;
+        }
 
-        // Perform initial recalculation using the memoized helper
-        const initiallyCalculatedTrades = loadedTrades.length > 0 ? recalculateTradesWithCurrentPortfolio(loadedTrades) : [];
+        // CRITICAL PERFORMANCE OPTIMIZATION:
+        // Skip expensive calculations on initial load - do them in background
+        const quickTrades = loadedTrades.length > 0 ?
+          recalculateTradesWithCurrentPortfolio(loadedTrades, true) : []; // Skip expensive calculations
 
         // Extract settings values
         const savedSearchQuery = settings?.search_query || '';
         const savedStatusFilter = settings?.status_filter || '';
 
-        // Set all state together to avoid race conditions
-        setTrades(initiallyCalculatedTrades);
+        // Set state immediately with quick calculations for instant UI
+        setTrades(quickTrades);
         setSearchQuery(savedSearchQuery);
         setStatusFilter(savedStatusFilter);
         setSortDescriptor(settings?.sort_descriptor || { column: 'tradeNo', direction: 'ascending' });
         setVisibleColumns(settings?.visible_columns || DEFAULT_VISIBLE_COLUMNS);
 
-        } catch (error) {
-        // Set empty state on error
+        // Cache the data
+        tradesCache.current.set('trades', quickTrades);
+        lastLoadTime.current = now;
+
+        // Mark as loaded immediately for fast UI
+        setIsLoading(false);
+
+        // BACKGROUND PROCESSING: Do full calculations after UI is ready
+        setTimeout(async () => {
+          if (loadedTrades.length > 0) {
+            const fullyCalculatedTrades = recalculateTradesWithCurrentPortfolio(loadedTrades, false);
+            setTrades(fullyCalculatedTrades);
+            tradesCache.current.set('trades', fullyCalculatedTrades);
+          }
+        }, 100); // Small delay to let UI render first
+
+      } catch (error) {
+        console.error('Failed to load trades:', error);
         setTrades([]);
       } finally {
-        // Use a small delay to ensure all state is set before marking as loaded
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 50);
+        const endTime = performance.now();
+        console.log(`⚡ Trade loading completed in ${Math.round(endTime - startTime)}ms`);
       }
     };
 

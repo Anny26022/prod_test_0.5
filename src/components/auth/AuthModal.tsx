@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Icon } from '@iconify/react'
 import { useAuth } from '../../context/AuthContext'
-import { getAuthErrorMessage } from '../../services/authService'
+import { getAuthErrorMessage, AuthService } from '../../services/authService'
 import { TradeTrackerLogo } from '../icons/TradeTrackerLogo'
 import { AnimatedBrandName } from '../AnimatedBrandName'
 import '../../styles/auth-performance.css'
@@ -90,36 +90,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen = true, onClose, on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    e.stopPropagation() // Prevent event bubbling
+    console.log('🔐 Form submitted, mode:', mode, 'email:', email)
+
+    // Clear any existing errors/success messages
     setError('')
     setSuccess('')
     setIsLoading(true)
 
+    // Prevent any potential page refresh
+    if (e.target) {
+      (e.target as HTMLFormElement).setAttribute('data-submitting', 'true')
+    }
+
     try {
       if (mode === 'signin') {
+        console.log('🔐 Attempting sign in...')
         const { error } = await signIn(email, password)
+
         if (error) {
+          console.error('❌ Sign in error received:', error)
           const errorCode = getAuthErrorMessage({ message: error } as any)
+          console.log('📝 Error code mapped to:', errorCode)
 
           // Handle specific error cases with custom messages
           if (errorCode === 'INVALID_CREDENTIALS') {
-            // For invalid credentials, provide helpful guidance
-            setError(`❌ Sign in failed!
+            // Simple, direct error message like password reset
+            const errorMessage = `❌ Incorrect email or password!
 
-🤔 This could mean:
-• You don't have an account yet - please sign up first
-• Your email or password is incorrect
-• Your email hasn't been verified yet
-
-💡 New user? Click "Sign Up Instead" below to create an account.`)
+💡 New user? Click "Sign Up Instead" below to create an account.`
+            console.log('🔴 Setting error message:', errorMessage)
+            setError(errorMessage)
+            console.log('🔴 Error state should now be:', errorMessage)
           } else if (errorCode === 'EMAIL_NOT_CONFIRMED') {
-            setError(`❌ Email not verified!
-
-📧 Please check your email (${email}) and click the verification link before signing in.
-
-💡 Check your spam folder if you don't see the verification email.`)
+            const emailError = `❌ Email not verified! Check your inbox and click the verification link.`
+            setError(emailError)
           } else {
             setError(errorCode)
           }
+          console.log('❌ Error set in UI:', errorCode)
+        } else {
+          console.log('✅ Sign in successful!')
         }
       } else if (mode === 'signup') {
         if (password !== confirmPassword) {
@@ -151,20 +162,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen = true, onClose, on
         if (error) {
           setError(getAuthErrorMessage({ message: error } as any))
         } else {
-          setSuccess(`🔐 Password reset email sent!
-
-📧 Please check your email (${email}) for the reset link.
-
-💡 Check your spam folder if you don't see the email within a few minutes.
-
-🔄 After resetting your password, come back here to sign in.`)
+          setSuccess(`If this email exists, a reset link was sent.`)
           setMode('signin')
         }
       }
     } catch (error) {
+      console.error('❌ Unexpected error in handleSubmit:', error)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
+      console.log('🔄 Form submission completed, loading set to false')
+
+      // Remove the submitting attribute
+      if (e.target) {
+        (e.target as HTMLFormElement).removeAttribute('data-submitting')
+      }
     }
   }
 
@@ -199,11 +211,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen = true, onClose, on
       if (error) {
         setError(error)
       } else {
-        setSuccess(`📧 Verification email sent to ${email}!
-
-Please check your inbox and click the verification link.
-
-💡 Check your spam folder if you don't see the email within a few minutes.`)
+        setSuccess(`Verification email sent! Check your inbox.`)
       }
     } catch (error) {
       setError('Failed to resend verification email. Please try again.')
@@ -319,10 +327,12 @@ Please check your inbox and click the verification link.
               </div>
             )}
 
+
+
             {/* Minimal Success Message */}
             {success && (
-              <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded text-center">
-                <p className="text-xs text-green-600 dark:text-green-400 leading-relaxed">
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-900/20 border border-gray-200 dark:border-gray-700 rounded text-center">
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                   {success}
                 </p>
               </div>
@@ -332,6 +342,9 @@ Please check your inbox and click the verification link.
             <form
               onSubmit={handleSubmit}
               className="auth-form-container space-y-3"
+              noValidate
+              autoComplete="off"
+              data-testid="auth-form"
             >
               {/* Name Fields for Signup */}
               {mode === 'signup' && (
@@ -405,6 +418,19 @@ Please check your inbox and click the verification link.
                 </div>
               )}
 
+              {/* Forgot Password Link - Only show for sign in mode */}
+              {mode === 'signin' && (
+                <div className="text-center">
+                  <button
+                    type="button"
+                    onClick={() => switchMode('forgot-password')}
+                    className="text-xs text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors underline"
+                  >
+                    Forgot your password?
+                  </button>
+                </div>
+              )}
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -419,7 +445,7 @@ Please check your inbox and click the verification link.
                   <>
                     {mode === 'signin' && 'Sign In'}
                     {mode === 'signup' && 'Sign Up'}
-                    {mode === 'forgot-password' && 'Send Reset'}
+                    {mode === 'forgot-password' && 'Send Reset Email'}
                   </>
                 )}
               </button>
@@ -477,7 +503,7 @@ Please check your inbox and click the verification link.
             )}
 
             {/* Minimal Navigation */}
-            <div className="mt-4 text-center">
+            <div className="mt-4 text-center space-y-2">
               {mode === 'signin' && (
                 <p className="text-xs text-gray-600 dark:text-gray-400">
                   Don't have an account?{' '}
@@ -491,24 +517,46 @@ Please check your inbox and click the verification link.
               )}
 
               {mode === 'signup' && (
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  Already have an account?{' '}
-                  <button
-                    onClick={() => switchMode('signin')}
-                    className="text-black dark:text-white underline hover:no-underline transition-colors"
-                  >
-                    Sign in
-                  </button>
-                </p>
+                <div className="space-y-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Already have an account?{' '}
+                    <button
+                      onClick={() => switchMode('signin')}
+                      className="text-black dark:text-white underline hover:no-underline transition-colors"
+                    >
+                      Sign in
+                    </button>
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Forgot your password?{' '}
+                    <button
+                      onClick={() => switchMode('forgot-password')}
+                      className="text-black dark:text-white underline hover:no-underline transition-colors"
+                    >
+                      Reset it
+                    </button>
+                  </p>
+                </div>
               )}
 
               {mode === 'forgot-password' && (
-                <button
-                  onClick={() => switchMode('signin')}
-                  className="text-xs text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors underline"
-                >
-                  ← Back to sign in
-                </button>
+                <div className="space-y-1">
+                  <button
+                    onClick={() => switchMode('signin')}
+                    className="text-xs text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors underline"
+                  >
+                    ← Back to sign in
+                  </button>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Don't have an account?{' '}
+                    <button
+                      onClick={() => switchMode('signup')}
+                      className="text-black dark:text-white underline hover:no-underline transition-colors"
+                    >
+                      Sign up
+                    </button>
+                  </p>
+                </div>
               )}
             </div>
 

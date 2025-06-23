@@ -1,8 +1,8 @@
-import React from "react";
-import { 
-  Card, 
-  CardBody, 
-  CardHeader, 
+import React, { Suspense } from "react";
+import {
+  Card,
+  CardBody,
+  CardHeader,
   Divider,
   Button,
   Dropdown,
@@ -14,14 +14,17 @@ import {
 } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { motion, AnimatePresence } from "framer-motion";
-import { PerformanceMetrics } from "./analytics/performance-metrics";
-import { TradeStatistics } from "./analytics/trade-statistics";
-import { TopPerformers } from "./analytics/top-performers";
-import { PerformanceChart } from "./analytics/performance-chart";
-import { DrawdownCurve } from "./analytics/drawdown-curve";
 import { useTrades } from "../hooks/use-trades";
 import { useDashboardConfig } from "../hooks/use-dashboard-config";
 import { pageVariants, cardVariants, fadeInVariants } from "../utils/animations";
+import { Loader } from "./Loader";
+
+// Lazy load analytics components for better performance
+const PerformanceMetrics = React.lazy(() => import("./analytics/performance-metrics").then(module => ({ default: module.PerformanceMetrics })));
+const TradeStatistics = React.lazy(() => import("./analytics/trade-statistics").then(module => ({ default: module.TradeStatistics })));
+const TopPerformers = React.lazy(() => import("./analytics/top-performers").then(module => ({ default: module.TopPerformers })));
+const PerformanceChart = React.lazy(() => import("./analytics/performance-chart").then(module => ({ default: module.PerformanceChart })));
+const DrawdownCurve = React.lazy(() => import("./analytics/drawdown-curve").then(module => ({ default: module.DrawdownCurve })));
 
 interface ChartDataPoint {
   month: string;
@@ -167,11 +170,13 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ duration: 0.2 }}
                   >
-                    <PerformanceChart
-                      trades={trades}
-                      onDataUpdate={handleChartDataUpdate}
-                      selectedView={selectedView}
-                    />
+                    <Suspense fallback={<Loader size="sm" message="Loading chart..." />}>
+                      <PerformanceChart
+                        trades={trades}
+                        onDataUpdate={handleChartDataUpdate}
+                        selectedView={selectedView}
+                      />
+                    </Suspense>
                   </motion.div>
                 </AnimatePresence>
               </CardBody>
@@ -188,7 +193,9 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
                 <h3 className="text-xl font-semibold tracking-tight dark:text-white">Performance Metrics</h3>
               </CardHeader>
               <CardBody>
-                <PerformanceMetrics trades={trades} isEditing={false} />
+                <Suspense fallback={<Loader size="sm" message="Loading metrics..." />}>
+                  <PerformanceMetrics trades={trades} isEditing={false} />
+                </Suspense>
               </CardBody>
             </Card>
           </motion.div>
@@ -202,7 +209,9 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
           initial="initial"
           animate="animate"
         >
-          <DrawdownCurve trades={trades} className="dark:bg-gray-900" />
+          <Suspense fallback={<Loader size="sm" message="Loading drawdown analysis..." />}>
+            <DrawdownCurve trades={trades} className="dark:bg-gray-900" />
+          </Suspense>
         </motion.div>
       )}
       
@@ -222,7 +231,9 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
               </CardHeader>
               <Divider className="dark:bg-gray-800" />
               <CardBody>
-                <TradeStatistics trades={trades} />
+                <Suspense fallback={<Loader size="sm" message="Loading statistics..." />}>
+                  <TradeStatistics trades={trades} />
+                </Suspense>
               </CardBody>
             </Card>
           </motion.div>
@@ -238,7 +249,9 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
               </CardHeader>
               <Divider className="dark:bg-gray-800" />
               <CardBody>
-                <TopPerformers trades={trades} />
+                <Suspense fallback={<Loader size="sm" message="Loading top performers..." />}>
+                  <TopPerformers trades={trades} />
+                </Suspense>
               </CardBody>
             </Card>
           </motion.div>

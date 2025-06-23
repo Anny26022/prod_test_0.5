@@ -1,12 +1,8 @@
-import React, { useRef, useState, useEffect, useMemo, useCallback } from "react";
+import React, { useRef, useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { Icon } from "@iconify/react";
 import { Route, Switch, Link, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@heroui/react";
-import { TradeJournal } from "./components/trade-journal";
-import { TradeAnalytics } from "./components/trade-analytics";
-import { TaxAnalytics } from "./components/tax-analytics";
-import { MonthlyPerformanceTable } from "./pages/monthly-performance";
 import { ThemeSwitcher } from "./components/theme-switcher";
 import { useTheme } from "@heroui/use-theme";
 import { TruePortfolioProvider } from "./utils/TruePortfolioContext";
@@ -17,9 +13,24 @@ import { AccountingMethodProvider } from "./context/AccountingMethodContext";
 import { GlobalFilterBar } from "./components/GlobalFilterBar";
 import { TradeTrackerLogo } from './components/icons/TradeTrackerLogo';
 import { AnimatedBrandName } from './components/AnimatedBrandName';
-import DeepAnalyticsPage from "./pages/DeepAnalyticsPage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Analytics } from '@vercel/analytics/react';
+import { Loader } from "./components/Loader";
+
+// Lazy load heavy components for better performance with preloading
+const TradeJournal = React.lazy(() => import("./components/trade-journal").then(module => ({ default: module.TradeJournal })));
+const TradeAnalytics = React.lazy(() => import("./components/trade-analytics").then(module => ({ default: module.TradeAnalytics })));
+const TaxAnalytics = React.lazy(() => import("./components/tax-analytics").then(module => ({ default: module.TaxAnalytics })));
+const MonthlyPerformanceTable = React.lazy(() => import("./pages/monthly-performance").then(module => ({ default: module.MonthlyPerformanceTable })));
+const DeepAnalyticsPage = React.lazy(() => import("./pages/DeepAnalyticsPage"));
+
+// Preload components for faster navigation
+const preloadComponents = () => {
+  // Preload most commonly accessed components
+  import("./components/trade-analytics");
+  import("./components/tax-analytics");
+  import("./pages/monthly-performance");
+};
 
 // Authentication and Migration
 import { AuthProvider, useAuth, useUser } from "./context/AuthContext";
@@ -163,6 +174,16 @@ function AppContent() {
 
     document.addEventListener('fullscreenchange', handleFullscreenChange);
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  // PERFORMANCE OPTIMIZATION: Preload components after initial render
+  React.useEffect(() => {
+    // Preload components after a short delay to not block initial render
+    const timer = setTimeout(() => {
+      preloadComponents();
+    }, 2000);
+
+    return () => clearTimeout(timer);
   }, []);
 
   // Memoize navigation items to prevent unnecessary re-renders
@@ -378,27 +399,29 @@ function AppContent() {
           <main ref={mainContentRef} className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
             <ErrorBoundary>
               <div className={isFullWidthEnabled ? "py-6" : "max-w-7xl mx-auto py-6"}>
-                <Switch>
-                  <Route path="/auth/callback">
-                    <AuthCallback />
-                  </Route>
-                  <Route path="/analytics">
-                    <TradeAnalytics />
-                  </Route>
-                  <Route exact path="/" render={(props) => (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                    >
-                      <TradeJournal {...props} toggleFullscreen={handleToggleMainContentFullscreen} isFullscreen={isMainContentFullscreen} />
-                    </motion.div>
-                  )} />
-                  <Route path="/tax-analytics" component={TaxAnalytics} />
-                  <Route path="/monthly-performance" component={MonthlyPerformanceTable} />
-                  <Route path="/deep-analytics" component={DeepAnalyticsPage} />
-                </Switch>
+                <Suspense fallback={<Loader />}>
+                  <Switch>
+                    <Route path="/auth/callback">
+                      <AuthCallback />
+                    </Route>
+                    <Route path="/analytics">
+                      <TradeAnalytics />
+                    </Route>
+                    <Route exact path="/" render={(props) => (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <TradeJournal {...props} toggleFullscreen={handleToggleMainContentFullscreen} isFullscreen={isMainContentFullscreen} />
+                      </motion.div>
+                    )} />
+                    <Route path="/tax-analytics" component={TaxAnalytics} />
+                    <Route path="/monthly-performance" component={MonthlyPerformanceTable} />
+                    <Route path="/deep-analytics" component={DeepAnalyticsPage} />
+                  </Switch>
+                </Suspense>
               </div>
             </ErrorBoundary>
           </main>

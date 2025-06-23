@@ -133,8 +133,13 @@ export const TradeJournal = React.memo(function TradeJournal({
   const [localTradeUpdates, setLocalTradeUpdates] = React.useState<Map<string, Partial<Trade>>>(new Map());
 
   // The trades from useTrades hook already include proper filtering, sorting, and cash basis expansion
-  // Apply local updates for instant UI feedback
+  // Apply local updates for instant UI feedback with optimized memoization
   const processedTrades = React.useMemo(() => {
+    // Early return if no local updates to avoid unnecessary mapping
+    if (localTradeUpdates.size === 0) {
+      return trades;
+    }
+
     return trades.map(trade => {
       const localUpdate = localTradeUpdates.get(trade.id);
       return localUpdate ? { ...trade, ...localUpdate } : trade;
@@ -403,7 +408,7 @@ export const TradeJournal = React.memo(function TradeJournal({
 
   const pages = shouldUseProgressiveLoading ? 1 : Math.ceil(processedTrades.length / rowsPerPage);
 
-  // Optimized pagination with optimistic updates applied
+  // Optimized pagination with optimistic updates applied and memoization
   const items = React.useMemo(() => {
     let baseItems;
     if (shouldUseProgressiveLoading) {
@@ -421,6 +426,15 @@ export const TradeJournal = React.memo(function TradeJournal({
     });
   }, [page, processedTrades, rowsPerPage, shouldUseProgressiveLoading, loadedTradesCount, optimisticUpdates]);
 
+  // Memoize table rows to prevent unnecessary re-renders
+  const memoizedTableRows = React.useMemo(() => {
+    return items.map((item: Trade) => ({
+      id: item.id,
+      data: item,
+      key: `${item.id}-${item.tradeNo}-${item.positionStatus}` // Include status for proper re-rendering
+    }));
+  }, [items]);
+
   // Optimized page change handler with immediate UI update
   const handlePageChange = React.useCallback((newPage: number) => {
     // Use startTransition for non-urgent updates to prevent blocking
@@ -429,8 +443,28 @@ export const TradeJournal = React.memo(function TradeJournal({
     });
   }, [setPage]);
 
-  // Remove heavy calculations from useEffect - they're causing the delay
-  // These calculations should be done lazily when needed, not on every page change
+  // PERFORMANCE OPTIMIZATION: Lazy load expensive calculations
+  const [expensiveCalculationsLoaded, setExpensiveCalculationsLoaded] = React.useState(false);
+
+  // Load expensive calculations in background after initial render
+  React.useEffect(() => {
+    if (!isLoading && trades.length > 0 && !expensiveCalculationsLoaded) {
+      // Use requestIdleCallback for non-critical calculations
+      const scheduleCalculations = () => {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => {
+            setExpensiveCalculationsLoaded(true);
+          }, { timeout: 1000 });
+        } else {
+          setTimeout(() => {
+            setExpensiveCalculationsLoaded(true);
+          }, 100);
+        }
+      };
+
+      scheduleCalculations();
+    }
+  }, [isLoading, trades.length, expensiveCalculationsLoaded]);
 
   // Single source of truth for column definitions
   const allColumns = React.useMemo(() => [
@@ -2290,29 +2324,73 @@ export const TradeJournal = React.memo(function TradeJournal({
     return filteredOpenTrades;
   }, [processedTrades, useCashBasis]);
 
-  // Memoize the price fetching function to prevent re-creation
+  // PERFORMANCE OPTIMIZATION: Batch price fetching with caching
+  const priceCache = React.useRef(new Map<string, { price: number, timestamp: number }>());
+  const PRICE_CACHE_DURATION = 60000; // 1 minute cache
+
   const fetchPricesForOpenTrades = React.useCallback(async () => {
+    if (openTrades.length === 0) return;
+
+    // Batch trades by symbol to reduce API calls
+    const tradesBySymbol = new Map<string, Trade[]>();
+    const symbolsToFetch: string[] = [];
+
     for (const trade of openTrades) {
       if (trade.name) {
-        try {
-          let priceData;
+        const symbol = trade.name.toUpperCase();
 
-          // Use smart fetch that prioritizes historical fallback during night hours (3:55-9:15 AM)
-          priceData = await fetchPriceTicksSmart(trade.name);
-
-          const ticks = priceData?.data?.ticks?.[trade.name.toUpperCase()];
-          if (ticks && ticks.length > 0) {
-            const latestTick = ticks[ticks.length - 1];
-            const newPrice = latestTick[4];
-
-            if (trade.cmp !== newPrice) {
-              updateTrade({ ...trade, cmp: newPrice, _cmpAutoFetched: true });
-            }
+        // Check cache first
+        const cached = priceCache.current.get(symbol);
+        if (cached && (Date.now() - cached.timestamp) < PRICE_CACHE_DURATION) {
+          // Use cached price
+          if (trade.cmp !== cached.price) {
+            updateTrade({ ...trade, cmp: cached.price, _cmpAutoFetched: true });
           }
-        } catch (err) {
-          // Continue with next trade instead of stopping
+          continue;
         }
+
+        if (!tradesBySymbol.has(symbol)) {
+          tradesBySymbol.set(symbol, []);
+          symbolsToFetch.push(symbol);
+        }
+        tradesBySymbol.get(symbol)!.push(trade);
       }
+    }
+
+    // Fetch prices in parallel batches for maximum speed
+    const batchSize = 5; // Limit concurrent requests
+    for (let i = 0; i < symbolsToFetch.length; i += batchSize) {
+      const batch = symbolsToFetch.slice(i, i + batchSize);
+
+      await Promise.allSettled(
+        batch.map(async (symbol) => {
+          try {
+            const priceData = await fetchPriceTicksSmart(symbol);
+            const ticks = priceData?.data?.ticks?.[symbol];
+
+            if (ticks && ticks.length > 0) {
+              const latestTick = ticks[ticks.length - 1];
+              const newPrice = latestTick[4];
+
+              // Cache the price
+              priceCache.current.set(symbol, {
+                price: newPrice,
+                timestamp: Date.now()
+              });
+
+              // Update all trades with this symbol
+              const tradesToUpdate = tradesBySymbol.get(symbol) || [];
+              for (const trade of tradesToUpdate) {
+                if (trade.cmp !== newPrice) {
+                  updateTrade({ ...trade, cmp: newPrice, _cmpAutoFetched: true });
+                }
+              }
+            }
+          } catch (err) {
+            // Continue with next symbol
+          }
+        })
+      );
     }
   }, [openTrades, updateTrade]);
 
@@ -2970,6 +3048,7 @@ export const TradeJournal = React.memo(function TradeJournal({
               >
             <Table
               aria-label="Trade journal table"
+              className="trade-table gpu-accelerated"
             bottomContent={
               shouldUseProgressiveLoading ? (
                 // Progressive loading controls for large datasets
@@ -2982,7 +3061,7 @@ export const TradeJournal = React.memo(function TradeJournal({
                       onPress={loadMoreTrades}
                       isLoading={isLoadingMore}
                       startContent={!isLoadingMore && <Icon icon="lucide:chevron-down" />}
-                      className="min-w-[120px]"
+                      className="min-w-[120px] optimized-button"
                     >
                       {isLoadingMore ? 'Loading...' : `Load More (${trades.length - loadedTradesCount} remaining)`}
                     </Button>
@@ -3082,21 +3161,21 @@ export const TradeJournal = React.memo(function TradeJournal({
               )}
             </TableHeader>
             <TableBody
-              items={items}
+              items={memoizedTableRows}
               isLoading={isLoading}
               emptyContent={isLoading ? " " : ""}
             >
-              {(item: Trade) => (
+              {(memoizedRow) => (
                 <TableRow
-                  key={item.id}
-                  className="hover:bg-default-50 dark:hover:bg-gray-800 dark:bg-gray-900 group"
+                  key={memoizedRow.key}
+                  className="trade-table-row hover:bg-default-50 dark:hover:bg-gray-800 dark:bg-gray-900 group gpu-accelerated"
                 >
                   {headerColumns.map((column) => (
                     <TableCell
-                      key={`${item.id}-${column.key}`}
-                      className={column.key === "name" ? "sticky-name-cell" : ""}
+                      key={`${memoizedRow.id}-${column.key}`}
+                      className={`trade-table-cell ${column.key === "name" ? "sticky-name-cell sticky-header" : ""}`}
                     >
-                      {renderCell(item, column.key)}
+                      {renderCell(memoizedRow.data, column.key)}
                     </TableCell>
                   ))}
                 </TableRow>

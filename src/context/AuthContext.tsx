@@ -160,21 +160,27 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [initializing])
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔐 AuthContext signIn called for:', email)
     setAuthState(prev => ({ ...prev, loading: true, error: null }))
 
     try {
       const { data, error } = await AuthService.signIn({ email, password })
 
       if (error) {
-        setAuthState(prev => ({ ...prev, loading: false, error: error.message }))
+        console.error('❌ AuthService returned error:', error.message)
+        // Don't update auth state on error - keep user in current state
+        setAuthState(prev => ({ ...prev, loading: false }))
         return { error: error.message }
       }
 
+      console.log('✅ AuthService sign in successful')
       // Auth state will be updated by the onAuthStateChange listener
+      // Don't update loading here - let the auth state change handle it
       return { error: null }
     } catch (error) {
+      console.error('❌ Unexpected error in AuthContext signIn:', error)
       const errorMessage = 'An unexpected error occurred during sign in'
-      setAuthState(prev => ({ ...prev, loading: false, error: errorMessage }))
+      setAuthState(prev => ({ ...prev, loading: false }))
       return { error: errorMessage }
     }
   }
