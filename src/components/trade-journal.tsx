@@ -2405,22 +2405,7 @@ export const TradeJournal = React.memo(function TradeJournal({
 
   return (
     <div className="space-y-4">
-      {/* Work in Progress Banner */}
-      <Card className="border-warning/50 bg-warning/5">
-        <CardBody className="p-3">
-          <div className="flex items-center gap-3">
-            <Icon icon="lucide:construction" className="text-warning w-5 h-5 flex-shrink-0" />
-            <div className="flex-1">
-              <h3 className="text-sm font-medium text-warning-700 dark:text-warning-300">
-                CSV Import Feature Under Development
-              </h3>
-              <p className="text-xs text-warning-600 dark:text-warning-400 mt-1">
-                We're working on improving the CSV import functionality. Manual trade entry is fully functional.
-              </p>
-            </div>
-          </div>
-        </CardBody>
-      </Card>
+
 
       {/* Custom CSS for sticky name column */}
       <style>{`
@@ -2635,14 +2620,14 @@ export const TradeJournal = React.memo(function TradeJournal({
                 <Icon icon="lucide:plus" className="w-3 h-3" />
               </Button>
             </motion.div>
-            <MobileTooltip content="CSV Import - Work in Progress" placement="top">
+            <MobileTooltip content="Import CSV/Excel" placement="top">
               <Button
                 isIconOnly
                 variant="light"
-                className="w-6 h-6 min-w-6 rounded p-0.5 opacity-50 cursor-not-allowed"
-                isDisabled={true}
+                className="w-6 h-6 min-w-6 rounded p-0.5 hover:bg-primary/10 transition"
+                onPress={onUploadOpen}
               >
-                <Icon icon="lucide:construction" className="w-3 h-3 text-warning" />
+                <Icon icon="lucide:upload" className="w-3 h-3" />
               </Button>
             </MobileTooltip>
             <Dropdown>
@@ -3019,16 +3004,29 @@ export const TradeJournal = React.memo(function TradeJournal({
                 }
               </div>
               {originalTrades.length === 0 && (
-                <Button
-                  color="primary"
-                  variant="shadow"
-                  size="sm"
-                  onPress={handleAddNewBlankTrade}
-                  startContent={<Icon icon="lucide:plus" className="w-4 h-4" />}
-                  className="font-medium px-4 py-1.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-300 shadow-lg shadow-primary/25 border-0 text-white rounded-full"
-                >
-                  Add Your First Trade
-                </Button>
+                <div className="flex flex-col gap-3 items-center">
+                  <Button
+                    color="primary"
+                    variant="shadow"
+                    size="sm"
+                    onPress={handleAddNewBlankTrade}
+                    startContent={<Icon icon="lucide:plus" className="w-4 h-4" />}
+                    className="font-medium px-4 py-1.5 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80 transition-all duration-300 shadow-lg shadow-primary/25 border-0 text-white rounded-full"
+                  >
+                    Add Your First Trade
+                  </Button>
+                  <div className="text-default-400 text-sm">or</div>
+                  <Button
+                    color="secondary"
+                    variant="bordered"
+                    size="sm"
+                    onPress={onUploadOpen}
+                    startContent={<Icon icon="lucide:upload" className="w-4 h-4" />}
+                    className="font-medium px-4 py-1.5 transition-all duration-300 rounded-full"
+                  >
+                    Import from CSV/Excel
+                  </Button>
+                </div>
               )}
             </div>
           ) : (

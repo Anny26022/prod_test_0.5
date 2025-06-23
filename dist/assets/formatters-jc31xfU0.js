@@ -1,0 +1,2 @@
+import{g as t}from"./react-vendor-EfHycc-t.js";import{b as e}from"./data-utils-DC7zLTCj.js";const r=t(e()),a=Object.freeze(Object.defineProperty({__proto__:null,default:r},Symbol.toStringTag,{value:"Module"})),n=t=>t||0===t?new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",minimumFractionDigits:2,maximumFractionDigits:2}).format(t):"-",o=t=>{if(!t)return"-";const e=new Date(t);return new Intl.DateTimeFormat("en-IN",{year:"numeric",month:"short",day:"numeric"}).format(e)};export{r as P,n as a,o as f,a as p};
+//# sourceMappingURL=formatters-jc31xfU0.js.map
