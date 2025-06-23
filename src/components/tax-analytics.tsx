@@ -156,10 +156,49 @@ export const TaxAnalytics: React.FC = () => {
   const handleCommentarySave = (tradeKey: string, newCommentary: string) => {
     setCustomCommentary(prev => ({
       ...prev,
-      [tradeKey]: newCommentary
+      [tradeKey]: newCommentary.trim() // Trim whitespace
     }));
     setEditingCommentary(null);
   };
+
+  // Local state for input values to prevent lag
+  const [inputValues, setInputValues] = React.useState<{ [key: string]: string }>({});
+
+  // Debounced function to update commentary
+  const debouncedUpdateCommentary = React.useCallback(
+    React.useMemo(() => {
+      const timeouts: { [key: string]: NodeJS.Timeout } = {};
+
+      return (tradeKey: string, value: string) => {
+        // Clear existing timeout for this trade
+        if (timeouts[tradeKey]) {
+          clearTimeout(timeouts[tradeKey]);
+        }
+
+        // Set new timeout
+        timeouts[tradeKey] = setTimeout(() => {
+          setCustomCommentary(prev => ({
+            ...prev,
+            [tradeKey]: value
+          }));
+          delete timeouts[tradeKey];
+        }, 150); // 150ms debounce
+      };
+    }, []),
+    []
+  );
+
+  // Function to handle commentary input changes (immediate for UI, debounced for state)
+  const handleCommentaryChange = React.useCallback((tradeKey: string, value: string) => {
+    // Update input value immediately for responsive UI
+    setInputValues(prev => ({
+      ...prev,
+      [tradeKey]: value
+    }));
+
+    // Debounce the actual state update
+    debouncedUpdateCommentary(tradeKey, value);
+  }, [debouncedUpdateCommentary]);
   const [taxesByMonth, setTaxesByMonth] = React.useState<{ [month: string]: number }>({});
 
   // Function to load tax data for the selected year
@@ -284,40 +323,141 @@ export const TaxAnalytics: React.FC = () => {
         maxDrawdown = drawdownPercentage;
       }
 
-      // Generate system commentary
+      // Generate intelligent system commentary with variety
       let commentary = "";
       let commentaryType = "neutral";
 
+      // Create pools of varied commentary for each scenario
       if (index === 0) {
-        commentary = "DD started";
+        const startCommentaries = [
+          "Journey begins • First position established",
+          "Portfolio inception • Capital deployment initiated",
+          "Trading year commenced • Risk-on mode",
+          "Market entry • Strategy execution starts"
+        ];
+        commentary = startCommentaries[Math.floor(Math.random() * startCommentaries.length)];
         commentaryType = "start";
       } else if (isNewPeak) {
-        commentary = `Touching new peak equity highs`;
+        const peakCommentaries = [
+          "🚀 Breaking new ground • Fresh equity peaks",
+          "⭐ Momentum accelerating • All-time portfolio highs",
+          "🎯 Strategy paying off • Record performance levels",
+          "💎 Capital compounding • New milestone achieved",
+          "🔥 Risk management working • Peak optimization",
+          "⚡ Execution excellence • Portfolio at new highs",
+          "🌟 Market timing perfect • Fresh equity records",
+          "🎪 Performance breakthrough • New peak territory"
+        ];
+        commentary = peakCommentaries[Math.floor(Math.random() * peakCommentaries.length)];
         commentaryType = "peak";
       } else if (drawdownFromPeak === 0 && previousPF < runningMax) {
-        const recoveryAmount = Math.abs(runningMax - previousPF);
-        commentary = `Recovery of ${recoveryAmount.toFixed(2)} from dd low of ${runningMax.toFixed(2)}`;
+        const recoveryCommentaries = [
+          "🔄 Full recovery achieved • Back to peak levels",
+          "💪 Resilience demonstrated • Peak restoration complete",
+          "🎯 Comeback successful • Portfolio strength confirmed",
+          "⚡ Recovery momentum • Peak levels reclaimed",
+          "🌅 Dawn after storm • Full drawdown recovery",
+          "🚀 Phoenix rising • Peak performance restored"
+        ];
+        commentary = recoveryCommentaries[Math.floor(Math.random() * recoveryCommentaries.length)];
         commentaryType = "recovery";
-      } else if (drawdownFromPeak > 0 && drawdownFromPeak < 5) {
-        commentary = `DD going on`;
+      } else if (drawdownFromPeak > 0 && drawdownFromPeak <= 2) {
+        const lightDrawdownCommentaries = [
+          "📉 Minor turbulence • Light profit-taking phase",
+          "🌊 Small waves • Natural market breathing",
+          "⚖️ Healthy correction • Portfolio rebalancing",
+          "🎯 Tactical pause • Risk assessment mode",
+          "💨 Brief headwinds • Temporary setback",
+          "🔍 Market recalibration • Minor adjustment period"
+        ];
+        commentary = lightDrawdownCommentaries[Math.floor(Math.random() * lightDrawdownCommentaries.length)];
         commentaryType = "mild";
-      } else if (drawdownFromPeak >= 5 && drawdownFromPeak < 15) {
-        commentary = `DD in full force (MODERATE DD)`;
+      } else if (drawdownFromPeak > 2 && drawdownFromPeak <= 5) {
+        const moderateDrawdownCommentaries = [
+          "⚠️ Moderate pressure • Risk controls engaged",
+          "🌪️ Market volatility • Position review initiated",
+          "📊 Stress testing • Portfolio resilience check",
+          "🎭 Challenging phase • Defensive positioning",
+          "⛈️ Storm clouds • Risk management critical",
+          "🔧 Recalibration needed • Strategy adjustment"
+        ];
+        commentary = moderateDrawdownCommentaries[Math.floor(Math.random() * moderateDrawdownCommentaries.length)];
         commentaryType = "moderate";
-      } else if (drawdownFromPeak >= 15) {
-        commentary = `DD in full force (SEVERE DD - RECORD DD IN ${selectedYear})`;
+      } else if (drawdownFromPeak > 5 && drawdownFromPeak <= 10) {
+        const significantDrawdownCommentaries = [
+          "🚨 Significant drawdown • Emergency protocols active",
+          "⛑️ Capital preservation • Defensive measures deployed",
+          "🌊 Heavy seas • Portfolio under pressure",
+          "🔴 Red alert • Risk limits approached",
+          "⚔️ Battle mode • Survival instincts engaged",
+          "🛡️ Shield up • Maximum protection needed"
+        ];
+        commentary = significantDrawdownCommentaries[Math.floor(Math.random() * significantDrawdownCommentaries.length)];
+        commentaryType = "moderate";
+      } else if (drawdownFromPeak > 10 && drawdownFromPeak <= 15) {
+        const deepDrawdownCommentaries = [
+          "💀 Deep drawdown • Crisis management mode",
+          "🆘 Mayday signal • Emergency measures required",
+          "🌋 Volcanic pressure • Portfolio in distress",
+          "⚰️ Severe damage • Recovery plan needed",
+          "🩸 Heavy bleeding • Tourniquet required",
+          "🌪️ Category 5 storm • Shelter mode activated"
+        ];
+        commentary = deepDrawdownCommentaries[Math.floor(Math.random() * deepDrawdownCommentaries.length)];
+        commentaryType = "severe";
+      } else {
+        const extremeDrawdownCommentaries = [
+          "☠️ DEFCON 1 • Maximum drawdown breach",
+          "🔥 Portfolio inferno • Emergency evacuation",
+          "💥 Nuclear winter • Survival mode only",
+          "🌊 Tsunami impact • Catastrophic losses",
+          "⚡ Perfect storm • All systems failing",
+          "🎭 Tragedy unfolding • Historic drawdown levels"
+        ];
+        commentary = extremeDrawdownCommentaries[Math.floor(Math.random() * extremeDrawdownCommentaries.length)];
         commentaryType = "severe";
       }
 
-      // Add specific movement details
+      // Add contextual insights based on trade performance and movement
       if (index > 0) {
         const move = currentPF - previousPF;
-        if (Math.abs(move) > 0.5) {
+        const absMove = Math.abs(move);
+
+        if (absMove > 2) {
           if (move > 0) {
-            commentary += ` • Portfolio up ${move.toFixed(2)}%`;
+            const positiveModifiers = [
+              "• Rocket fuel ignited",
+              "• Momentum surge",
+              "• Power move up",
+              "• Breakout confirmed",
+              "• Bulls charging"
+            ];
+            commentary += ` ${positiveModifiers[Math.floor(Math.random() * positiveModifiers.length)]} (+${move.toFixed(2)}%)`;
           } else {
-            commentary += ` • Portfolio down ${Math.abs(move).toFixed(2)}%`;
+            const negativeModifiers = [
+              "• Gravity pulling",
+              "• Bears attacking",
+              "• Pressure mounting",
+              "• Support failing",
+              "• Selling pressure"
+            ];
+            commentary += ` ${negativeModifiers[Math.floor(Math.random() * negativeModifiers.length)]} (${move.toFixed(2)}%)`;
           }
+        } else if (absMove > 0.5) {
+          if (move > 0) {
+            commentary += ` • Steady climb (+${move.toFixed(2)}%)`;
+          } else {
+            commentary += ` • Gradual decline (${move.toFixed(2)}%)`;
+          }
+        }
+      }
+
+      // Add special insights for significant individual trade impacts
+      if (Math.abs(stockPFImpact) > 1) {
+        if (stockPFImpact > 0) {
+          commentary += ` • Winner impact: +${stockPFImpact.toFixed(2)}%`;
+        } else {
+          commentary += ` • Loser impact: ${stockPFImpact.toFixed(2)}%`;
         }
       }
 
@@ -330,8 +470,11 @@ export const TaxAnalytics: React.FC = () => {
       const tradeKey = `${displayDate}-${trade.name}-${index}`;
 
       // Use custom commentary if available, otherwise use system commentary
-      const finalCommentary = customCommentary[tradeKey] || commentary || 'No commentary';
-      const finalCommentaryType = customCommentary[tradeKey] ? 'custom' : (commentaryType || 'neutral');
+      const hasCustomCommentary = customCommentary[tradeKey] !== undefined;
+      const finalCommentary = hasCustomCommentary
+        ? (customCommentary[tradeKey] || 'Custom commentary (empty)')
+        : (commentary || 'No commentary');
+      const finalCommentaryType = hasCustomCommentary ? 'custom' : (commentaryType || 'neutral');
 
       previousPF = currentPF;
 
@@ -349,7 +492,7 @@ export const TaxAnalytics: React.FC = () => {
         accountingMethod: useCashBasis ? 'Cash' : 'Accrual'
       };
     });
-  }, [closedTrades, useCashBasis, selectedYear, customCommentary, editingCommentary]);
+  }, [closedTrades, useCashBasis, selectedYear, customCommentary]);
 
   let runningMax = cummPfs.length > 0 ? cummPfs[0] : 0;
   let maxDrawdownPoints = 0;
@@ -682,24 +825,25 @@ export const TaxAnalytics: React.FC = () => {
                     </div>
                   </div>
 
-                  <Table
-                    aria-label="Drawdown breakdown table"
-                    classNames={{
-                      wrapper: "max-h-[55vh] border border-divider/30 rounded-lg overflow-hidden",
-                      table: "border-collapse",
-                      th: "bg-content1/50 text-sm font-medium text-default-600 border-b border-divider/30 px-3 py-2.5",
-                      td: "py-2.5 px-3 text-sm border-b border-divider/20",
-                      tr: "hover:bg-content1/20 transition-colors"
-                    }}
-                    removeWrapper={false}
-                  >
+                  <div className="max-h-[55vh] border border-divider/30 rounded-lg overflow-auto scrollbar-ultra-thin">
+                    <Table
+                      aria-label="Drawdown breakdown table"
+                      classNames={{
+                        wrapper: "shadow-none border-none",
+                        table: "border-collapse table-fixed w-full min-w-[720px]",
+                        th: "bg-background text-sm font-medium text-default-600 border-b border-divider/30 px-3 py-2.5 sticky top-0 z-10 overflow-hidden shadow-sm",
+                        td: "py-2.5 px-3 text-sm border-b border-divider/20 overflow-hidden",
+                        tr: "hover:bg-content1/20 transition-colors"
+                      }}
+                      removeWrapper={true}
+                    >
                     <TableHeader>
                       <TableColumn key="date" align="start" width={90}>Date</TableColumn>
-                      <TableColumn key="symbol" align="start" width={80}>Symbol</TableColumn>
-                      <TableColumn key="stockPF" align="center" width={110}>Stock PF Impact</TableColumn>
-                      <TableColumn key="cummPF" align="center" width={110}>Cum PF Impact</TableColumn>
-                      <TableColumn key="drawdown" align="center" width={110}>DD From Peak</TableColumn>
-                      <TableColumn key="commentary" align="start">Commentary</TableColumn>
+                      <TableColumn key="symbol" align="start" width={120}>Symbol</TableColumn>
+                      <TableColumn key="stockPF" align="center" width={120}>Stock PF Impact</TableColumn>
+                      <TableColumn key="cummPF" align="center" width={120}>Cum PF Impact</TableColumn>
+                      <TableColumn key="drawdown" align="center" width={120}>DD From Peak</TableColumn>
+                      <TableColumn key="commentary" align="start" width={150}>Commentary</TableColumn>
                     </TableHeader>
                     <TableBody items={drawdownBreakdown.filter(item => item && item.symbol)}>
                       {(item) => (
@@ -712,10 +856,14 @@ export const TaxAnalytics: React.FC = () => {
                               {item.isNewPeak && (
                                 <Icon icon="lucide:crown" className="w-3 h-3 text-warning" />
                               )}
-                              <span className="text-sm">{new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' })}</span>
+                              <span className="text-sm">{new Date(item.date).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-sm">{item.symbol}</TableCell>
+                          <TableCell className="font-medium text-sm">
+                            <span className="block" title={item.symbol}>
+                              {item.symbol}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-center">
                             <span className={`text-sm font-medium ${item.stockPFImpact >= 0 ? "text-success" : "text-danger"}`}>
                               {item.stockPFImpact >= 0 ? "+" : ""}{item.stockPFImpact.toFixed(2)}%
@@ -735,27 +883,83 @@ export const TaxAnalytics: React.FC = () => {
                             {editingCommentary === item.tradeKey ? (
                               <Input
                                 size="sm"
-                                value={customCommentary[item.tradeKey] || item.systemCommentary}
-                                onValueChange={(value) => setCustomCommentary(prev => ({ ...prev, [item.tradeKey]: value }))}
-                                onBlur={() => setEditingCommentary(null)}
+                                value={
+                                  inputValues[item.tradeKey] !== undefined
+                                    ? inputValues[item.tradeKey]
+                                    : customCommentary[item.tradeKey] !== undefined
+                                      ? customCommentary[item.tradeKey]
+                                      : item.systemCommentary
+                                }
+                                onValueChange={(value) => handleCommentaryChange(item.tradeKey, value)}
+                                onBlur={() => {
+                                  const currentValue = inputValues[item.tradeKey] !== undefined
+                                    ? inputValues[item.tradeKey]
+                                    : customCommentary[item.tradeKey];
+
+                                  if (currentValue !== undefined) {
+                                    handleCommentarySave(item.tradeKey, currentValue);
+                                  }
+
+                                  // Clear input value
+                                  setInputValues(prev => {
+                                    const newState = { ...prev };
+                                    delete newState[item.tradeKey];
+                                    return newState;
+                                  });
+                                  setEditingCommentary(null);
+                                }}
                                 onKeyDown={(e) => {
                                   if (e.key === 'Enter') {
+                                    const currentValue = inputValues[item.tradeKey] !== undefined
+                                      ? inputValues[item.tradeKey]
+                                      : customCommentary[item.tradeKey];
+
+                                    if (currentValue !== undefined) {
+                                      handleCommentarySave(item.tradeKey, currentValue);
+                                    }
+
+                                    // Clear input value
+                                    setInputValues(prev => {
+                                      const newState = { ...prev };
+                                      delete newState[item.tradeKey];
+                                      return newState;
+                                    });
                                     setEditingCommentary(null);
                                   }
                                   if (e.key === 'Escape') {
+                                    // Clear input value and revert
+                                    setInputValues(prev => {
+                                      const newState = { ...prev };
+                                      delete newState[item.tradeKey];
+                                      return newState;
+                                    });
                                     setEditingCommentary(null);
                                   }
                                 }}
                                 variant="bordered"
                                 autoFocus
+                                placeholder="Enter commentary or leave empty..."
                                 classNames={{
                                   input: "text-xs",
                                   inputWrapper: "h-7 min-h-unit-7"
                                 }}
+                                onFocus={(e) => {
+                                  // Initialize input value and select text
+                                  const initialValue = customCommentary[item.tradeKey] !== undefined
+                                    ? customCommentary[item.tradeKey]
+                                    : item.systemCommentary;
+
+                                  setInputValues(prev => ({
+                                    ...prev,
+                                    [item.tradeKey]: initialValue
+                                  }));
+
+                                  setTimeout(() => e.target.select(), 0);
+                                }}
                               />
                             ) : (
                               <div
-                                className={`text-sm px-2 py-1 rounded font-medium cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all ${
+                                className={`text-xs px-2 py-1.5 rounded-md font-medium cursor-pointer hover:ring-1 hover:ring-primary/50 transition-all leading-tight ${
                                   customCommentary[item.tradeKey] ? 'bg-primary/10 text-primary border border-primary/20' :
                                   item.commentaryType === 'peak' ? 'bg-success/10 text-success' :
                                   item.commentaryType === 'recovery' ? 'bg-primary/10 text-primary' :
@@ -767,17 +971,20 @@ export const TaxAnalytics: React.FC = () => {
                                 onClick={() => handleCommentaryEdit(item.tradeKey)}
                                 title="Click to edit commentary"
                               >
-                                <span className="truncate block max-w-[140px]">{item.commentary}</span>
-                                {customCommentary[item.tradeKey] && (
-                                  <Icon icon="lucide:edit-3" className="w-3 h-3 ml-1 inline opacity-60" />
-                                )}
+                                <div className="max-w-[200px] break-words whitespace-normal">
+                                  {item.commentary}
+                                  {customCommentary[item.tradeKey] && (
+                                    <Icon icon="lucide:edit-3" className="w-3 h-3 ml-1 inline opacity-60" />
+                                  )}
+                                </div>
                               </div>
                             )}
                           </TableCell>
                         </TableRow>
                       )}
                     </TableBody>
-                  </Table>
+                    </Table>
+                  </div>
                 </div>
               </ModalBody>
               <ModalFooter className="border-t border-gray-200 dark:border-gray-700 px-4 py-1.5">

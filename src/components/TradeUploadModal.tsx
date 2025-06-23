@@ -691,7 +691,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       'initialQty': ['qty', 'quantity', 'initial qty', 'shares', 'units', 'volume', 'size', 'initial qty', 'base qty', 'initial qty'],
       'positionSize': ['position size', 'pos size', 'pos. size', 'position value', 'trade size'],
       'allocation': ['allocation', 'allocation %', 'allocation (%)', 'alloc', 'alloc %'],
-      'slPercent': ['sl %', 'sl percent', 'stop loss %', 'stop loss percent', 'sl percentage'],
+      'slPercent': ['sl %', 'sl percent', 'stop loss %', 'stop loss percent', 'sl percentage', 'sl%', 'sl per', 'stop loss per', 'stoploss %', 'stoploss percent'],
       'pyramid1Price': ['pyramid 1 price', 'p1 price', 'p-1 price', 'pyramid1 price', 'pyr1 price', 'pyramid-1 price', 'pyramid-1 price (₹)', 'p1 price (₹)'],
       'pyramid1Qty': ['pyramid 1 qty', 'p1 qty', 'p-1 qty', 'pyramid1 qty', 'pyr1 qty', 'p-1\nqty', 'p-1 qty', 'p1 qty'],
       'pyramid1Date': ['pyramid 1 date', 'p1 date', 'p-1 date', 'pyramid1 date', 'pyr1 date', 'p-1\ndate', 'p-1 date', 'p1 date'],
@@ -700,13 +700,13 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       'pyramid2Date': ['pyramid 2 date', 'p2 date', 'p-2 date', 'pyramid2 date', 'pyr2 date', 'p-2\ndate', 'p-2 date', 'p-2 date', 'p2 date'],
       'exit1Price': ['exit 1 price', 'e1 price', 'exit1 price', 'sell 1 price', 'exit price', 'exit-1\nprice', 'exit-1 price', 'exit-1 price (₹)', 'e1 price (₹)'],
       'exit1Qty': ['exit 1 qty', 'e1 qty', 'exit1 qty', 'sell 1 qty', 'exit qty', 'exit-1\nqty', 'exit-1 qty', 'e1 qty'],
-      'exit1Date': ['exit 1 date', 'e1 date', 'exit1 date', 'sell 1 date', 'exit date'],
+      'exit1Date': ['exit 1 date', 'e1 date', 'exit1 date', 'sell 1 date', 'exit date', 'e1date', 'e1dt', 'exit1dt', 'first exit date', 'exit date 1'],
       'exit2Price': ['exit 2 price', 'e2 price', 'exit2 price', 'sell 2 price', 'exit-2\nprice', 'exit-2 price', 'exit-2 price (₹)', 'e2 price (₹)'],
       'exit2Qty': ['exit 2 qty', 'e2 qty', 'exit2 qty', 'sell 2 qty', 'exit-2\nqty', 'exit-2 qty', 'e2 qty'],
-      'exit2Date': ['exit 2 date', 'e2 date', 'exit2 date', 'sell 2 date'],
+      'exit2Date': ['exit 2 date', 'e2 date', 'exit2 date', 'sell 2 date', 'e2date', 'e2dt', 'exit2dt', 'second exit date', 'exit date 2'],
       'exit3Price': ['exit 3 price', 'e3 price', 'exit3 price', 'sell 3 price', 'exit-3\nprice', 'exit-3 price', 'exit-3 price (₹)', 'exit-3 price', 'e3 price (₹)'],
       'exit3Qty': ['exit 3 qty', 'e3 qty', 'exit3 qty', 'sell 3 qty', 'exit-3\nqty', 'exit-3 qty', 'exit-3 qty', 'e3 qty'],
-      'exit3Date': ['exit 3 date', 'e3 date', 'exit3 date', 'sell 3 date'],
+      'exit3Date': ['exit 3 date', 'e3 date', 'exit3 date', 'sell 3 date', 'e3date', 'e3dt', 'exit3dt', 'third exit date', 'exit date 3'],
       'openQty': ['open qty', 'open quantity', 'open qty', 'remaining qty', 'balance qty'],
       'exitedQty': ['exited qty', 'exited quantity', 'exited qty', 'sold qty', 'closed qty'],
       'avgExitPrice': ['avg exit', 'average exit', 'avg. exit', 'avg exit price', 'average exit price', 'avg. exit price'],
@@ -938,35 +938,68 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     // Apply context-aware mapping for ambiguous columns first
     mapAmbiguousColumnsWithContext();
 
-    // Direct mapping for specific known columns that might not be caught by similarity
+    // Enhanced direct mapping for specific known columns with variations
     const directMappings: { [key: string]: string } = {
       'E1 Date': 'exit1Date',
       'E2 Date': 'exit2Date',
       'E3 Date': 'exit3Date',
-      'SL %': 'slPercent'
+      'SL %': 'slPercent',
+      // Add common variations
+      'Exit 1 Date': 'exit1Date',
+      'Exit 2 Date': 'exit2Date',
+      'Exit 3 Date': 'exit3Date',
+      'Exit1 Date': 'exit1Date',
+      'Exit2 Date': 'exit2Date',
+      'Exit3 Date': 'exit3Date',
+      'E1Date': 'exit1Date',
+      'E2Date': 'exit2Date',
+      'E3Date': 'exit3Date',
+      'SL%': 'slPercent',
+      'SL Percent': 'slPercent',
+      'SL Per': 'slPercent',
+      'Stop Loss %': 'slPercent',
+      'Stop Loss Percent': 'slPercent'
     };
 
     console.log('🔍 Checking direct mappings...');
     Object.entries(directMappings).forEach(([columnName, fieldName]) => {
-      const columnIndex = headers.findIndex(h => h === columnName);
+      // Try exact match first
+      let columnIndex = headers.findIndex(h => h === columnName);
+
+      // If exact match fails, try case-insensitive match
+      if (columnIndex === -1) {
+        columnIndex = headers.findIndex(h => h.toLowerCase().trim() === columnName.toLowerCase().trim());
+      }
+
+      // If still not found, try fuzzy matching for close variations
+      if (columnIndex === -1) {
+        columnIndex = headers.findIndex(h => {
+          const cleanHeader = h.toLowerCase().replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
+          const cleanColumn = columnName.toLowerCase().replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
+          return cleanHeader === cleanColumn;
+        });
+      }
+
       console.log(`Looking for column "${columnName}" for field "${fieldName}": found at index ${columnIndex}`);
 
       if (columnIndex !== -1) {
+        const actualColumnName = headers[columnIndex];
         const alreadyMappedField = mapping[fieldName];
-        const columnAlreadyUsed = Object.values(mapping).includes(columnName);
+        const columnAlreadyUsed = Object.values(mapping).includes(actualColumnName);
 
         console.log(`  - Field "${fieldName}" already mapped: ${alreadyMappedField ? 'YES to ' + alreadyMappedField : 'NO'}`);
-        console.log(`  - Column "${columnName}" already used: ${columnAlreadyUsed ? 'YES' : 'NO'}`);
+        console.log(`  - Column "${actualColumnName}" already used: ${columnAlreadyUsed ? 'YES' : 'NO'}`);
 
-        if (!mapping[fieldName] && !Object.values(mapping).includes(columnName)) {
-          mapping[fieldName] = columnName;
+        if (!mapping[fieldName] && !Object.values(mapping).includes(actualColumnName)) {
+          mapping[fieldName] = actualColumnName;
           confidence[fieldName] = 100;
-          console.log(`🎯 Direct mapping: ${fieldName} → "${columnName}" (100%)`);
+          console.log(`🎯 Direct mapping: ${fieldName} → "${actualColumnName}" (100%)`);
         } else {
-          console.log(`❌ Skipping direct mapping for ${fieldName} → "${columnName}"`);
+          console.log(`❌ Skipping direct mapping for ${fieldName} → "${actualColumnName}"`);
         }
       } else {
         console.log(`❌ Column "${columnName}" not found in headers`);
+        console.log(`📋 Available headers:`, headers);
       }
     });
 
@@ -2326,13 +2359,18 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                                   <Select
                                     placeholder="Select column or skip"
                                     size="sm"
-                                    selectedKeys={columnMapping[field.key] ? [columnMapping[field.key]] : []}
+                                    selectedKeys={columnMapping[field.key] ?
+                                      parsedData.headers.map((header, index) =>
+                                        header === columnMapping[field.key] ? `${header}-${index}` : null
+                                      ).filter(Boolean) : []}
                                     onSelectionChange={(keys) => {
                                       const selectedKey = Array.from(keys)[0] as string;
                                       if (selectedKey) {
+                                        // Extract the original header name from the key format "header-index"
+                                        const headerName = selectedKey.replace(/-\d+$/, '');
                                         setColumnMapping(prev => ({
                                           ...prev,
-                                          [field.key]: selectedKey
+                                          [field.key]: headerName
                                         }));
                                         // Clear confidence when manually changed
                                         setMappingConfidence(prev => {
@@ -2354,8 +2392,8 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                                       }
                                     }}
                                   >
-                                    {parsedData.headers.map((header) => (
-                                      <SelectItem key={header}>
+                                    {parsedData.headers.map((header, index) => (
+                                      <SelectItem key={`${header}-${index}`}>
                                         {header}
                                       </SelectItem>
                                     ))}

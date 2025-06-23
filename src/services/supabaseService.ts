@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase'
 import { AuthService } from './authService'
 import type { Trade, ChartImage, CapitalChange } from '../types/trade'
 import { v4 as uuidv4 } from 'uuid'
+import { validateTradeForDatabase, sanitizeTradeForDatabase, validateTradesBatch } from '../utils/databaseValidation'
 
 // Simple hash function for browser compatibility
 const simpleHash = (str: string): string => {
@@ -313,6 +314,14 @@ export class SupabaseService {
 
       console.log('💾 Saving trade to Supabase:', trade.name, 'User ID:', userId)
 
+      // Validate and sanitize trade data before saving
+      const validation = validateTradeForDatabase(trade)
+      if (!validation.isValid) {
+        console.warn('⚠️ Trade data validation failed:', validation.errors)
+        console.log('🔧 Sanitizing trade data to fit database constraints')
+        trade = sanitizeTradeForDatabase(trade)
+      }
+
       const dbRow = tradeToDbRow(trade, userId)
       const uuid = dbRow.id
 
@@ -372,18 +381,41 @@ export class SupabaseService {
 
       console.log(`💾 Saving ${trades.length} trades to Supabase for user:`, userId)
 
-      // Delete all existing trades for the user
-      console.log('🗑️ Clearing existing trades...')
-      const { error: deleteError } = await supabase
-        .from('trades')
-        .delete()
-        .eq('user_id', userId)
+      // Validate and sanitize all trades before saving
+      console.log('🔍 Validating trade data for database constraints...')
+      const validation = validateTradesBatch(trades)
 
-      if (deleteError) {
-        console.error('❌ Error deleting existing trades:', deleteError)
-        throw deleteError
+      if (validation.invalidTrades.length > 0) {
+        console.warn(`⚠️ Found ${validation.invalidTrades.length} trades with validation issues:`)
+        validation.invalidTrades.forEach(({ trade, errors }) => {
+          console.warn(`  - Trade ${trade.tradeNo} (${trade.name}):`, errors)
+        })
+        console.log('🔧 Sanitizing invalid trades to fit database constraints')
+
+        // Sanitize all trades to ensure they fit database constraints
+        trades = trades.map(trade => sanitizeTradeForDatabase(trade))
+        console.log('✅ All trades sanitized successfully')
+      } else {
+        console.log('✅ All trades passed validation')
       }
-      console.log('✅ Existing trades cleared')
+
+      // Delete all existing trades for the user (with better error handling)
+      console.log('🗑️ Clearing existing trades...')
+      try {
+        const { error: deleteError } = await supabase
+          .from('trades')
+          .delete()
+          .eq('user_id', userId)
+
+        if (deleteError) {
+          console.warn('⚠️ Warning deleting existing trades:', deleteError)
+          // Continue anyway - might be first time user
+        } else {
+          console.log('✅ Existing trades cleared')
+        }
+      } catch (deleteErr) {
+        console.warn('⚠️ Could not clear existing trades, continuing anyway:', deleteErr)
+      }
 
       if (trades.length === 0) {
         console.log('ℹ️ No trades to save')
@@ -391,23 +423,95 @@ export class SupabaseService {
         return true
       }
 
-      // Convert all trades to database format with UUID conversion
-      const dbRows = trades.map(trade => tradeToDbRow(trade, userId))
+      // Convert all trades to database format with UUID conversion and duplicate handling
+      const dbRows = trades.map(trade => {
+        const dbRow = tradeToDbRow(trade, userId)
+        // Ensure unique ID by regenerating if needed
+        if (!dbRow.id || dbRow.id.length !== 36) {
+          dbRow.id = uuidv4()
+          console.log(`🔄 Generated new UUID for trade ${trade.tradeNo}: ${dbRow.id}`)
+        }
+        return dbRow
+      })
       console.log('📝 Converted trades to DB format:', dbRows.length)
 
-      // Insert all new trades in batches to avoid payload size limits
-      const batchSize = 100
+      // Insert all new trades in smaller batches with enhanced error handling
+      const batchSize = 25 // Smaller batches for better reliability
+      const totalBatches = Math.ceil(dbRows.length / batchSize)
+
       for (let i = 0; i < dbRows.length; i += batchSize) {
         const batch = dbRows.slice(i, i + batchSize)
-        console.log(`📤 Inserting batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(dbRows.length/batchSize)} (${batch.length} trades)`)
+        const batchNumber = Math.floor(i/batchSize) + 1
+        console.log(`📤 Inserting batch ${batchNumber}/${totalBatches} (${batch.length} trades)`)
 
-        const { error: insertError } = await supabase
-          .from('trades')
-          .insert(batch)
+        let retryCount = 0
+        const maxRetries = 3
 
-        if (insertError) {
-          console.error('❌ Error inserting batch:', insertError)
-          throw insertError
+        while (retryCount <= maxRetries) {
+          try {
+            const { error: insertError } = await supabase
+              .from('trades')
+              .insert(batch)
+
+            if (insertError) {
+              console.error(`❌ Error inserting batch ${batchNumber} (attempt ${retryCount + 1}):`, insertError)
+
+              // Handle different error types
+              if (insertError.code === '23505') {
+                // Duplicate key error - regenerate UUIDs
+                console.log('🔄 Duplicate key detected, regenerating UUIDs...')
+                batch.forEach(row => row.id = uuidv4())
+                retryCount++
+                continue
+              } else if (insertError.code === '22003') {
+                // Numeric overflow - sanitize data
+                console.log('🔧 Numeric overflow detected, sanitizing data...')
+                batch.forEach((row, index) => {
+                  const originalTrade = trades[i + index]
+                  const sanitizedTrade = sanitizeTradeForDatabase(originalTrade)
+                  Object.assign(row, tradeToDbRow(sanitizedTrade, userId))
+                })
+                retryCount++
+                continue
+              } else if (insertError.code === '23514') {
+                // Check constraint violation
+                console.log('⚠️ Constraint violation detected, skipping problematic trades...')
+                // Try inserting trades one by one to identify problematic ones
+                for (const singleRow of batch) {
+                  try {
+                    const { error: singleError } = await supabase
+                      .from('trades')
+                      .insert([singleRow])
+
+                    if (singleError) {
+                      console.warn(`⚠️ Skipping trade ${singleRow.trade_no}: ${singleError.message}`)
+                    } else {
+                      console.log(`✅ Individual trade ${singleRow.trade_no} inserted`)
+                    }
+                  } catch (singleTradeError) {
+                    console.warn(`⚠️ Failed to insert trade ${singleRow.trade_no}:`, singleTradeError)
+                  }
+                }
+                break // Exit retry loop for this batch
+              } else {
+                throw insertError
+              }
+            } else {
+              console.log(`✅ Batch ${batchNumber} inserted successfully`)
+              break // Success - exit retry loop
+            }
+          } catch (batchError) {
+            console.error(`❌ Failed to insert batch ${batchNumber} (attempt ${retryCount + 1}):`, batchError)
+            retryCount++
+
+            if (retryCount > maxRetries) {
+              console.error(`❌ Max retries exceeded for batch ${batchNumber}`)
+              throw batchError
+            }
+
+            // Wait before retry
+            await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+          }
         }
       }
 

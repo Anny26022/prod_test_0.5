@@ -18,24 +18,65 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Custom scrollbar */
+/* Super sleek custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
-  background: hsl(var(--heroui-content2));
-  border-radius: 4px;
+  background: transparent;
+  border-radius: 2px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--heroui-default-300));
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
+  transition: all 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(var(--heroui-default-400));
+  background: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.2);
+  }
+}
+
+/* Ultra-thin scrollbar for specific containers */
+.scrollbar-ultra-thin::-webkit-scrollbar {
+  width: 2px;
+  height: 2px;
+}
+
+.scrollbar-ultra-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-ultra-thin::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 1px;
+}
+
+.scrollbar-ultra-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  .scrollbar-ultra-thin::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.05);
+  }
+
+  .scrollbar-ultra-thin::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.15);
+  }
 }
 
 /* Animations */

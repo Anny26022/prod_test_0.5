@@ -858,9 +858,14 @@ export const useTrades = () => {
   const bulkImportTrades = React.useCallback((importedTrades: Trade[]) => {
     const startTime = performance.now();
 
+    // Clear cache to prevent duplicate loading issues
+    tradesCache.current.clear();
+    lastLoadTime.current = 0;
+
     setTrades(prev => {
-      // Combine existing trades with imported trades
-      const combinedTrades = [...importedTrades, ...prev];
+      // CRITICAL FIX: Replace existing trades with imported trades to prevent duplicates
+      // Use only imported trades, don't combine with existing ones
+      const combinedTrades = [...importedTrades];
 
       // Sort all trades by date to ensure proper chronological order (with safe date parsing)
       combinedTrades.sort((a, b) => {
