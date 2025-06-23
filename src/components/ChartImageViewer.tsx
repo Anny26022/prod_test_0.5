@@ -33,21 +33,36 @@ export const ChartImageViewer: React.FC<ChartImageViewerProps> = ({
       setIsLoading(true);
       setError(null);
 
+      console.log(`🔍 [CHART_VIEWER] Loading chart image:`, {
+        filename: chartImage.filename,
+        hasDataUrl: !!chartImage.dataUrl,
+        isTemporary: !!(chartImage as any).isTemporary,
+        storage: chartImage.storage
+      });
+
       // If chartImage already has a dataUrl, use it directly
       if (chartImage.dataUrl) {
         setImageUrl(chartImage.dataUrl);
         setIsLoading(false);
+        console.log(`📷 [CHART_VIEWER] Using existing dataUrl for:`, chartImage.filename);
+      } else if ((chartImage as any).isTemporary) {
+        // For temporary images without dataUrl, show error
+        setError('Temporary chart image missing preview data');
+        setIsLoading(false);
+        console.warn(`⚠️ [CHART_VIEWER] Temporary image missing dataUrl:`, chartImage.filename);
       } else {
-        // Otherwise, fetch from service
+        // For saved images, fetch from service
+        console.log(`🔍 [CHART_VIEWER] Fetching from service:`, chartImage.filename);
         ChartImageService.getChartImageDataUrl(chartImage)
           .then(url => {
             setImageUrl(url);
             setIsLoading(false);
+            console.log(`✅ [CHART_VIEWER] Successfully loaded from service`);
           })
           .catch(err => {
             setError('Failed to load image');
             setIsLoading(false);
-            console.error('Failed to load chart image:', err);
+            console.error('❌ [CHART_VIEWER] Failed to load chart image:', err);
           });
       }
     } else {

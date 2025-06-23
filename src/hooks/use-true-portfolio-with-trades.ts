@@ -47,11 +47,11 @@ export const useTruePortfolioWithTrades = (trades: any[] = []) => {
     getLatestTruePortfolioSize,
     getMonthlyTruePortfolio,
     getAllMonthlyTruePortfolios,
-    
+
     // Backward compatibility
     portfolioSize,
     getPortfolioSize: getTruePortfolioSize, // Alias for backward compatibility
-    
+
     // Pass through other functions that don't need trades
     yearlyStartingCapitals: truePortfolioContext.yearlyStartingCapitals,
     setYearlyStartingCapital: truePortfolioContext.setYearlyStartingCapital,

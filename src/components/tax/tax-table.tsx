@@ -40,173 +40,173 @@ interface TaxData {
 }
 
 const taxData: TaxData[] = [
-  { 
-    month: "January", 
-    totalTrades: 9, 
-    winRate: "#N/A", 
-    avgProfit: "#DIV/0!", 
-    avgLoss: "-405.81", 
-    grossPL: -3652.27, 
-    taxes: 355.00, 
-    netPL: -4007.27, 
-    taxPercent: "-9.72%", 
-    grossPFImpact: "-1.25%", 
-    netPFImpact: "-1.37%", 
-    returnPercent: "-1.25%" 
+  {
+    month: "January",
+    totalTrades: 9,
+    winRate: "#N/A",
+    avgProfit: "#DIV/0!",
+    avgLoss: "-405.81",
+    grossPL: -3652.27,
+    taxes: 355.00,
+    netPL: -4007.27,
+    taxPercent: "-9.72%",
+    grossPFImpact: "-1.25%",
+    netPFImpact: "-1.37%",
+    returnPercent: "-1.25%"
   },
-  { 
-    month: "February", 
-    totalTrades: 0, 
-    winRate: "#N/A", 
-    avgProfit: "#DIV/0!", 
-    avgLoss: "-678.72", 
-    grossPL: -2714.89, 
-    taxes: 93.00, 
-    netPL: -2807.89, 
-    taxPercent: "-3.43%", 
-    grossPFImpact: "-0.94%", 
-    netPFImpact: "-0.97%", 
-    returnPercent: "-0.94%" 
+  {
+    month: "February",
+    totalTrades: 0,
+    winRate: "#N/A",
+    avgProfit: "#DIV/0!",
+    avgLoss: "-678.72",
+    grossPL: -2714.89,
+    taxes: 93.00,
+    netPL: -2807.89,
+    taxPercent: "-3.43%",
+    grossPFImpact: "-0.94%",
+    netPFImpact: "-0.97%",
+    returnPercent: "-0.94%"
   },
-  { 
-    month: "March", 
-    totalTrades: 6, 
-    winRate: "16.67%", 
-    avgProfit: "2925", 
-    avgLoss: "-591.68", 
-    grossPL: -33.40, 
-    taxes: 807.00, 
-    netPL: -840.40, 
-    taxPercent: "-2416.17%", 
-    grossPFImpact: "-0.01%", 
-    netPFImpact: "-0.26%", 
-    returnPercent: "-0.01%" 
+  {
+    month: "March",
+    totalTrades: 6,
+    winRate: "16.67%",
+    avgProfit: "2925",
+    avgLoss: "-591.68",
+    grossPL: -33.40,
+    taxes: 807.00,
+    netPL: -840.40,
+    taxPercent: "-2416.17%",
+    grossPFImpact: "-0.01%",
+    netPFImpact: "-0.26%",
+    returnPercent: "-0.01%"
   },
-  { 
-    month: "April", 
-    totalTrades: 12, 
-    winRate: "33.33%", 
-    avgProfit: "3681.2425", 
-    avgLoss: "-508.41", 
-    grossPL: 10657.72, 
-    taxes: 690.35, 
-    netPL: 9967.37, 
-    taxPercent: "6.48%", 
-    grossPFImpact: "3.47%", 
-    netPFImpact: "3.24%", 
-    returnPercent: "3.47%" 
+  {
+    month: "April",
+    totalTrades: 12,
+    winRate: "33.33%",
+    avgProfit: "3681.2425",
+    avgLoss: "-508.41",
+    grossPL: 10657.72,
+    taxes: 690.35,
+    netPL: 9967.37,
+    taxPercent: "6.48%",
+    grossPFImpact: "3.47%",
+    netPFImpact: "3.24%",
+    returnPercent: "3.47%"
   },
-  { 
-    month: "May", 
-    totalTrades: 10, 
-    winRate: "40%", 
-    avgProfit: "4135.65", 
-    avgLoss: "-661.93", 
-    grossPL: 12571.03, 
-    taxes: 972.52, 
-    netPL: 11598.51, 
-    taxPercent: "7.74%", 
-    grossPFImpact: "3.95%", 
-    netPFImpact: "3.65%", 
-    returnPercent: "3.95%" 
+  {
+    month: "May",
+    totalTrades: 10,
+    winRate: "40%",
+    avgProfit: "4135.65",
+    avgLoss: "-661.93",
+    grossPL: 12571.03,
+    taxes: 972.52,
+    netPL: 11598.51,
+    taxPercent: "7.74%",
+    grossPFImpact: "3.95%",
+    netPFImpact: "3.65%",
+    returnPercent: "3.95%"
   },
-  { 
-    month: "June", 
-    totalTrades: 12, 
-    winRate: "41.67%", 
-    avgProfit: "14710.852", 
-    avgLoss: "-993.57", 
-    grossPL: 10657.72, 
-    taxes: 1786.00, 
-    netPL: 8871.72, 
-    taxPercent: "16.76%", 
-    grossPFImpact: "2.88%", 
-    netPFImpact: "2.40%", 
-    returnPercent: "17.99%" 
+  {
+    month: "June",
+    totalTrades: 12,
+    winRate: "41.67%",
+    avgProfit: "14710.852",
+    avgLoss: "-993.57",
+    grossPL: 10657.72,
+    taxes: 1786.00,
+    netPL: 8871.72,
+    taxPercent: "16.76%",
+    grossPFImpact: "2.88%",
+    netPFImpact: "2.40%",
+    returnPercent: "17.99%"
   },
-  { 
-    month: "July", 
-    totalTrades: 16, 
-    winRate: "50%", 
-    avgProfit: "3690.04375", 
-    avgLoss: "-763.42", 
-    grossPL: 23413.03, 
-    taxes: 2127.47, 
-    netPL: 21285.56, 
-    taxPercent: "9.09%", 
-    grossPFImpact: "5.36%", 
-    netPFImpact: "4.87%", 
-    returnPercent: "5.36%" 
+  {
+    month: "July",
+    totalTrades: 16,
+    winRate: "50%",
+    avgProfit: "3690.04375",
+    avgLoss: "-763.42",
+    grossPL: 23413.03,
+    taxes: 2127.47,
+    netPL: 21285.56,
+    taxPercent: "9.09%",
+    grossPFImpact: "5.36%",
+    netPFImpact: "4.87%",
+    returnPercent: "5.36%"
   },
-  { 
-    month: "August", 
-    totalTrades: 9, 
-    winRate: "44.44%", 
-    avgProfit: "3042.5425", 
-    avgLoss: "-971.99", 
-    grossPL: 7310.20, 
-    taxes: 768.85, 
-    netPL: 6541.35, 
-    taxPercent: "10.52%", 
-    grossPFImpact: "1.59%", 
-    netPFImpact: "1.42%", 
-    returnPercent: "1.59%" 
+  {
+    month: "August",
+    totalTrades: 9,
+    winRate: "44.44%",
+    avgProfit: "3042.5425",
+    avgLoss: "-971.99",
+    grossPL: 7310.20,
+    taxes: 768.85,
+    netPL: 6541.35,
+    taxPercent: "10.52%",
+    grossPFImpact: "1.59%",
+    netPFImpact: "1.42%",
+    returnPercent: "1.59%"
   },
-  { 
-    month: "September", 
-    totalTrades: 14, 
-    winRate: "42.86%", 
-    avgProfit: "15166.51333", 
-    avgLoss: "-759.91", 
-    grossPL: 84919.78, 
-    taxes: 1750.00, 
-    netPL: 83169.78, 
-    taxPercent: "2.06%", 
-    grossPFImpact: "18.16%", 
-    netPFImpact: "17.79%", 
-    returnPercent: "18.16%" 
+  {
+    month: "September",
+    totalTrades: 14,
+    winRate: "42.86%",
+    avgProfit: "15166.51333",
+    avgLoss: "-759.91",
+    grossPL: 84919.78,
+    taxes: 1750.00,
+    netPL: 83169.78,
+    taxPercent: "2.06%",
+    grossPFImpact: "18.16%",
+    netPFImpact: "17.79%",
+    returnPercent: "18.16%"
   },
-  { 
-    month: "October", 
-    totalTrades: 7, 
-    winRate: "42.86%", 
-    avgProfit: "248.73", 
-    avgLoss: "-745.72", 
-    grossPL: -2236.68, 
-    taxes: 2956.00, 
-    netPL: -5192.68, 
-    taxPercent: "-132.16%", 
-    grossPFImpact: "-0.23%", 
-    netPFImpact: "-0.54%", 
-    returnPercent: "-0.23%" 
+  {
+    month: "October",
+    totalTrades: 7,
+    winRate: "42.86%",
+    avgProfit: "248.73",
+    avgLoss: "-745.72",
+    grossPL: -2236.68,
+    taxes: 2956.00,
+    netPL: -5192.68,
+    taxPercent: "-132.16%",
+    grossPFImpact: "-0.23%",
+    netPFImpact: "-0.54%",
+    returnPercent: "-0.23%"
   },
-  { 
-    month: "November", 
-    totalTrades: 7, 
-    winRate: "42.86%", 
-    avgProfit: "1272.236667", 
-    avgLoss: "-286.52", 
-    grossPL: 2670.62, 
-    taxes: 173.00, 
-    netPL: 2497.62, 
-    taxPercent: "6.48%", 
-    grossPFImpact: "0.28%", 
-    netPFImpact: "0.26%", 
-    returnPercent: "0.28%" 
+  {
+    month: "November",
+    totalTrades: 7,
+    winRate: "42.86%",
+    avgProfit: "1272.236667",
+    avgLoss: "-286.52",
+    grossPL: 2670.62,
+    taxes: 173.00,
+    netPL: 2497.62,
+    taxPercent: "6.48%",
+    grossPFImpact: "0.28%",
+    netPFImpact: "0.26%",
+    returnPercent: "0.28%"
   },
-  { 
-    month: "December", 
-    totalTrades: 20, 
-    winRate: "50%", 
-    avgProfit: "2818.115", 
-    avgLoss: "-2164.22", 
-    grossPL: 6538.92, 
-    taxes: 4597.00, 
-    netPL: 1941.92, 
-    taxPercent: "70.30%", 
-    grossPFImpact: "0.69%", 
-    netPFImpact: "0.20%", 
-    returnPercent: "0.69%" 
+  {
+    month: "December",
+    totalTrades: 20,
+    winRate: "50%",
+    avgProfit: "2818.115",
+    avgLoss: "-2164.22",
+    grossPL: 6538.92,
+    taxes: 4597.00,
+    netPL: 1941.92,
+    taxPercent: "70.30%",
+    grossPFImpact: "0.69%",
+    netPFImpact: "0.20%",
+    returnPercent: "0.69%"
   }
 ];
 
@@ -216,7 +216,6 @@ function fetchTaxData() {
     const stored = localStorage.getItem('taxData');
     return stored ? JSON.parse(stored) : {};
   } catch (error) {
-    console.error('Error fetching tax data:', error);
     return {};
   }
 }
@@ -225,8 +224,7 @@ function saveTaxData(taxData: any) {
   try {
     localStorage.setItem('taxData', JSON.stringify(taxData));
   } catch (error) {
-    console.error('localStorage save error:', error);
-  }
+    }
 }
 
 // Editable Text Component
@@ -263,7 +261,7 @@ const EditableText: React.FC<{
 
   if (!isEditing) {
     return (
-      <motion.span 
+      <motion.span
         className={`inline-block ${className}`}
         initial={{ opacity: 0.8 }}
         animate={{ opacity: 1 }}
@@ -345,11 +343,11 @@ export const TaxTable: React.FC<TaxTableProps> = ({ trades = [], taxesByMonth, s
 
   const handleEditComplete = useCallback((newValueString: string, eventType: 'enter' | 'blur' | 'escape') => {
     if (editingCell) {
-      let newValue = parseFloat(newValueString); 
+      let newValue = parseFloat(newValueString);
 
       // If the input is empty or results in NaN, treat it as 0
       if (isNaN(newValue) || newValueString.trim() === '') {
-        newValue = 0; 
+        newValue = 0;
       }
 
       // If a negative number is entered, set it to 0
@@ -381,8 +379,6 @@ export const TaxTable: React.FC<TaxTableProps> = ({ trades = [], taxesByMonth, s
       setEditingCell(null);
     }
   }, [editingCell, setTaxesByMonth]);
-
-
 
   const columns = React.useMemo(() => [
     {
@@ -459,8 +455,8 @@ export const TaxTable: React.FC<TaxTableProps> = ({ trades = [], taxesByMonth, s
 
     if (columnKey === 'taxes') {
         return (
-        <TableCell 
-          key={columnKey} 
+        <TableCell
+          key={columnKey}
           className="cursor-pointer rounded-md"
           onClick={() => handleEditStart(item.month, item.taxes)}
         >
@@ -566,11 +562,11 @@ export const TaxTable: React.FC<TaxTableProps> = ({ trades = [], taxesByMonth, s
           const winRate = totalTrades > 0 ? ((winTrades.length / totalTrades) * 100).toFixed(2) + '%' : "-";
           const avgProfit = winTrades.length > 0 ? winTrades.reduce((sum, t) => sum + t.accountingPL, 0) / winTrades.length : "-";
           const avgLoss = lossTrades.length > 0 ? lossTrades.reduce((sum, t) => sum + t.accountingPL, 0) / lossTrades.length : "-";
-          
+
           const taxes = taxesByMonth[month] || 0;
           const netPL = grossPL - taxes;
           const taxPercent = grossPL !== 0 ? ((taxes / grossPL) * 100).toFixed(2) + '%' : "0.00%";
-          
+
           const portfolioSizeForMonth = getPortfolioSize(getShortMonthName(month), new Date().getFullYear(), trades, useCashBasis);
           const grossPFImpact = portfolioSizeForMonth > 0 ? ((grossPL / portfolioSizeForMonth) * 100).toFixed(2) + '%' : "0.00%";
           const netPFImpact = portfolioSizeForMonth > 0 ? ((netPL / portfolioSizeForMonth) * 100).toFixed(2) + '%' : "0.00%";

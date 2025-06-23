@@ -122,8 +122,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     getAccountingAwareValues
   } = useTrades();
 
-
-
   const { portfolioSize, getPortfolioSize } = useTruePortfolioWithTrades(trades);
   const { accountingMethod } = useAccountingMethod();
   const useCashBasis = accountingMethod === 'cash';
@@ -142,8 +140,6 @@ export const TradeJournal = React.memo(function TradeJournal({
       return localUpdate ? { ...trade, ...localUpdate } : trade;
     });
   }, [trades, localTradeUpdates]);
-
-
 
   // Use shared accounting calculations hook to eliminate redundant calculations
   const sharedCalculations = useAccountingCalculations(processedTrades);
@@ -178,15 +174,11 @@ export const TradeJournal = React.memo(function TradeJournal({
     };
   }, [processedTrades, useCashBasis, sharedCalculations]); // Now depends on processed trades with local updates
 
-
-
   // This will be moved after items definition
 
   const handleExport = (format: 'csv' | 'xlsx') => {
     // Use the raw, unfiltered trades from the hook for export
     const allTradesForExport = trades;
-
-    console.log(`📊 Exporting ${allTradesForExport.length} trades using ${useCashBasis ? 'Cash Basis' : 'Accrual Basis'} accounting method`);
 
     // Define the headers for the export, ensuring they match the allColumns definitions
     const exportHeaders = allColumns
@@ -354,7 +346,6 @@ export const TradeJournal = React.memo(function TradeJournal({
         // Set saved value if it's valid, otherwise use default (10)
         setRowsPerPage(initialOptions.includes(savedValue) ? savedValue : 10);
       } catch (error) {
-        console.error('❌ Failed to load rows per page:', error);
         setRowsPerPage(10);
       } finally {
         setRowsPerPageLoaded(true);
@@ -440,8 +431,6 @@ export const TradeJournal = React.memo(function TradeJournal({
 
   // Remove heavy calculations from useEffect - they're causing the delay
   // These calculations should be done lazily when needed, not on every page change
-
-
 
   // Single source of truth for column definitions
   const allColumns = React.useMemo(() => [
@@ -530,14 +519,6 @@ export const TradeJournal = React.memo(function TradeJournal({
   };
 
   const handleUpdateTrade = (trade: Trade) => {
-    console.log('📊 [TradeJournal] Updating trade with chart attachments:', {
-      tradeId: trade.id,
-      tradeName: trade.name,
-      hasBeforeEntry: !!trade.chartAttachments?.beforeEntry,
-      hasAfterExit: !!trade.chartAttachments?.afterExit,
-      chartAttachments: trade.chartAttachments
-    });
-
     // Check if this update involves chart changes (deletion/modification)
     const existingTrade = trades.find(t => t.id === trade.id);
     const chartChanged = existingTrade && (
@@ -550,8 +531,7 @@ export const TradeJournal = React.memo(function TradeJournal({
     // Trigger chart refresh if charts were modified
     if (chartChanged) {
       setChartRefreshTrigger(prev => prev + 1);
-      console.log('🔄 Chart changes detected, triggering Universal Chart Viewer refresh');
-    }
+      }
 
     onEditOpenChange();
   };
@@ -566,8 +546,7 @@ export const TradeJournal = React.memo(function TradeJournal({
       // Trigger chart refresh if the deleted trade had charts
       if (hasCharts) {
         setChartRefreshTrigger(prev => prev + 1);
-        console.log('🔄 Trade with charts deleted, triggering Universal Chart Viewer refresh');
-      }
+        }
 
       onDeleteOpenChange();
     }
@@ -578,12 +557,7 @@ export const TradeJournal = React.memo(function TradeJournal({
     bulkImportTrades(importedTrades);
 
     // Show success message
-    console.log(`Successfully imported ${importedTrades.length} trades`);
-  }, [bulkImportTrades]);
-
-
-
-
+    }, [bulkImportTrades]);
 
   // List of calculated fields that should not be editable
   const nonEditableFields = [
@@ -634,8 +608,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     return getPortfolioSize(month, year);
   }, [getPortfolioSize, portfolioSize, accountingMethod]);
 
-
-
   // Debounced update to reduce API calls and improve performance
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingUpdatesRef = useRef<Map<string, { field: keyof Trade, value: any }>>(new Map());
@@ -681,7 +653,6 @@ export const TradeJournal = React.memo(function TradeJournal({
       // If the field is 'name', fetch the latest price and update cmp (only if CMP is currently 0 or not manually set)
       if (field === 'name' && parsedValue) {
         try {
-          console.log(`[handleInlineEditSave] Fetching price for ${parsedValue}`);
           let priceData;
 
           // Use smart fetch that prioritizes historical fallback during night hours (3:55-9:15 AM)
@@ -697,24 +668,21 @@ export const TradeJournal = React.memo(function TradeJournal({
               updatedTrade.cmp = fetchedPrice;
               // Add a flag to indicate this was auto-fetched (for UI indication)
               updatedTrade._cmpAutoFetched = true;
-              console.log(`[handleInlineEditSave] Successfully fetched price ${fetchedPrice} for ${parsedValue}`);
-            }
+              }
           } else {
             // No price data available - keep existing CMP if it's manually set, otherwise set to 0
             if (tradeToUpdate.cmp === 0) {
               updatedTrade.cmp = 0;
               updatedTrade._cmpAutoFetched = false;
             }
-            console.warn(`[handleInlineEditSave] No price data available for ${parsedValue}`);
-          }
+            }
         } catch (err) {
           // All fetch attempts failed - keep existing CMP if it's manually set, otherwise set to 0
           if (tradeToUpdate.cmp === 0) {
             updatedTrade.cmp = 0;
             updatedTrade._cmpAutoFetched = false;
           }
-          console.error(`[handleInlineEditSave] All price fetch attempts failed for ${parsedValue}:`, err);
-        }
+          }
       }
 
       // If the field is 'cmp' and manually edited, mark it as manually set
@@ -789,16 +757,7 @@ export const TradeJournal = React.memo(function TradeJournal({
 
         // Debug logging for position status updates
         if (field !== 'positionStatus') {
-          console.log(`🔄 Position Status Check for ${tradeToUpdate.name}:`, {
-            field,
-            hasUserEditedPositionStatus,
-            shouldAutoUpdatePositionStatus,
-            userEditedFields: tradeToUpdate._userEditedFields,
-            currentStatus: tradeToUpdate.positionStatus,
-            openQty: updatedTrade.openQty,
-            exitedQty
-          });
-        }
+          }
 
         if (shouldAutoUpdatePositionStatus) {
           const newStatus = updatedTrade.openQty <= 0 && exitedQty > 0 ? 'Closed'
@@ -806,7 +765,6 @@ export const TradeJournal = React.memo(function TradeJournal({
                           : 'Open';
 
           if (newStatus !== updatedTrade.positionStatus) {
-            console.log(`🔄 Auto-updating position status for ${tradeToUpdate.name}: ${updatedTrade.positionStatus} → ${newStatus}`);
             updatedTrade.positionStatus = newStatus;
           }
         }
@@ -869,7 +827,6 @@ export const TradeJournal = React.memo(function TradeJournal({
         });
       });
     } catch (error) {
-      console.error(`❌ Error in handleInlineEditSave for trade ${tradeId} field '${field}':`, error);
       // Clear any optimistic updates on error
       setOptimisticUpdates(prev => {
         const newUpdates = new Map(prev);
@@ -1059,10 +1016,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     };
   }, [handleKeyboardNavigation]);
 
-
-
-
-
   // Format cell value based on its type
   const formatCellValue = (value: any, key: string) => {
     if (value === undefined || value === null || value === '') return '-';
@@ -1115,10 +1068,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     const numValue = Number(value);
     return numValue < 0 ? 'text-danger' : numValue > 0 ? 'text-success' : '';
   };
-
-
-
-
 
   // Pre-compute all tooltip data for better performance
   const precomputedTooltips = React.useMemo(() => {
@@ -1549,10 +1498,6 @@ export const TradeJournal = React.memo(function TradeJournal({
   const renderCell = React.useCallback((trade: Trade, columnKey: string) => {
     const cellValue = trade[columnKey as keyof Trade];
 
-
-
-
-
     // Trade details tooltip for stock name (precomputed)
     if (columnKey === 'name') {
       const tooltipData = precomputedTooltips.get(trade.id)?.tradeDetails;
@@ -1781,8 +1726,6 @@ export const TradeJournal = React.memo(function TradeJournal({
       );
     }
 
-
-
     // Special handling for accounting-aware fields BEFORE non-editable check
     if (columnKey === "plRs" || columnKey === "realisedAmount") {
       // CRITICAL FIX: Always calculate P/L properly using getAccountingAwareValues
@@ -1854,8 +1797,6 @@ export const TradeJournal = React.memo(function TradeJournal({
         </div>
       );
     }
-
-
 
     if (columnKey === 'setup') {
       return (
@@ -1947,7 +1888,6 @@ export const TradeJournal = React.memo(function TradeJournal({
             </Tooltip>
           </div>
         );
-
 
       // Date fields - editable
       case "date":
@@ -2070,14 +2010,7 @@ export const TradeJournal = React.memo(function TradeJournal({
 
         // Debug logging for chart attachments
         if (trade.name === 'ASIANHOTNR' || trade.name === 'RELIANCE') { // Add your test trade names here
-          console.log(`📊 [ChartAttachments] Rendering for ${trade.name}:`, {
-            hasBeforeEntry: !!hasBeforeEntry,
-            hasAfterExit: !!hasAfterExit,
-            beforeEntryId: hasBeforeEntry?.id,
-            afterExitId: hasAfterExit?.id,
-            chartAttachments: trade.chartAttachments
-          });
-        }
+          }
 
         if (!hasBeforeEntry && !hasAfterExit) {
           return (
@@ -2206,8 +2139,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     // CRITICAL FIX: Use processedTrades for stats calculation to include local updates
     const tradesForStats = processedTrades;
 
-
-
     // Calculate unrealized P/L for open positions using filtered trades to respond to search
     // For cash basis, we need to be careful not to double count, so we'll use a Set to track original trade IDs
     let unrealizedPL = 0;
@@ -2247,21 +2178,13 @@ export const TradeJournal = React.memo(function TradeJournal({
       realizedTrades = processedTrades.filter(trade => trade.positionStatus !== 'Open');
     }
 
-
-
     let debugSum = 0;
     const realizedPL = realizedTrades.reduce((sum, trade, index) => {
       const tradePL = calculateTradePL(trade, useCashBasis);
       debugSum += tradePL;
 
-
-
       return sum + tradePL;
     }, 0);
-
-
-
-
 
     // Calculate realized PF Impact using accounting-aware portfolio sizes (same as tooltip)
     const realizedImpact = realizedTrades.reduce((sum, trade) => {
@@ -2315,8 +2238,6 @@ export const TradeJournal = React.memo(function TradeJournal({
         // Use the first trade as the representative (they all have the same original data)
         const representativeTrade = trades[0];
 
-
-
         return {
           ...representativeTrade,
           id: originalId, // Use original ID
@@ -2336,8 +2257,6 @@ export const TradeJournal = React.memo(function TradeJournal({
     const winningTrades = tradesWithAccountingPL.filter(t => t.accountingPL > 0);
     const winRate = tradesWithAccountingPL.length > 0 ? (winningTrades.length / tradesWithAccountingPL.length) * 100 : 0;
 
-
-
     return {
       totalUnrealizedPL: unrealizedPL,
       openPfImpact: openImpact,
@@ -2352,10 +2271,6 @@ export const TradeJournal = React.memo(function TradeJournal({
   React.useEffect(() => {
     setLazyStats(stableStatsCalculation);
   }, [stableStatsCalculation]);
-
-
-
-
 
   // Memoize open trades to prevent unnecessary price fetching (use processed trades to include local updates)
   const openTrades = React.useMemo(() => {
@@ -2522,8 +2437,6 @@ export const TradeJournal = React.memo(function TradeJournal({
                 </Button>
               )}
 
-
-
               <Dropdown>
                 <DropdownTrigger>
                   <Button
@@ -2668,10 +2581,10 @@ export const TradeJournal = React.memo(function TradeJournal({
                 aria-label="Export options"
                 onAction={(key) => handleExport(key as 'csv' | 'xlsx')}
               >
-                <DropdownItem key="csv" startContent={<Icon icon="lucide:file-text" />}>
+                <DropdownItem key="csv" textValue="Export as CSV" startContent={<Icon icon="lucide:file-text" />}>
                   Export as CSV
                 </DropdownItem>
-                <DropdownItem key="xlsx" startContent={<Icon icon="lucide:file-spreadsheet" />}>
+                <DropdownItem key="xlsx" textValue="Export as Excel" startContent={<Icon icon="lucide:file-spreadsheet" />}>
                   Export as Excel
                 </DropdownItem>
               </DropdownMenu>
@@ -3042,7 +2955,6 @@ export const TradeJournal = React.memo(function TradeJournal({
             </div>
           ) : (
             <>
-
 
               <div
                 className="relative overflow-auto max-h-[70vh]
@@ -3821,8 +3733,8 @@ const BuySellCell: React.FC<BuySellCellProps> = React.memo(function BuySellCell(
         }}
         autoFocus
       >
-        <DropdownItem key="Buy">Buy</DropdownItem>
-        <DropdownItem key="Sell">Sell</DropdownItem>
+        <DropdownItem key="Buy" textValue="Buy">Buy</DropdownItem>
+        <DropdownItem key="Sell" textValue="Sell">Sell</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   );
@@ -3879,9 +3791,9 @@ const PositionStatusCell: React.FC<PositionStatusCellProps> = React.memo(functio
         }}
         autoFocus
       >
-        <DropdownItem key="Open">Open</DropdownItem>
-        <DropdownItem key="Closed">Closed</DropdownItem>
-        <DropdownItem key="Partial">Partial</DropdownItem>
+        <DropdownItem key="Open" textValue="Open">Open</DropdownItem>
+        <DropdownItem key="Closed" textValue="Closed">Closed</DropdownItem>
+        <DropdownItem key="Partial" textValue="Partial">Partial</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   );
@@ -3937,7 +3849,6 @@ const ProficiencyGrowthAreasCell: React.FC<ProficiencyGrowthAreasCellProps> = Re
           setAvailableDefaultOptions(PROFICIENCY_GROWTH_AREAS);
         }
       } catch (error) {
-        console.error('Error loading growth areas options:', error);
         setAvailableDefaultOptions(PROFICIENCY_GROWTH_AREAS);
       }
     };
@@ -4036,7 +3947,7 @@ const ProficiencyGrowthAreasCell: React.FC<ProficiencyGrowthAreasCellProps> = Re
             </DropdownItem>
           ))
           .concat([
-            <DropdownItem key="__add_new__" className="text-primary">
+            <DropdownItem key="__add_new__" textValue="Add new growth area..." className="text-primary">
               <span className="flex items-center gap-1">
                 <Icon icon="lucide:plus" className="w-4 h-4" /> Add new growth area...
               </span>
@@ -4488,7 +4399,6 @@ const SetupCell: React.FC<SetupCellProps> = React.memo(function SetupCell({ valu
           setAvailableDefaultOptions(SETUP_OPTIONS);
         }
       } catch (error) {
-        console.error('Error loading setup options:', error);
         setAvailableDefaultOptions(SETUP_OPTIONS);
       }
     };
@@ -4599,7 +4509,7 @@ const SetupCell: React.FC<SetupCellProps> = React.memo(function SetupCell({ valu
             </DropdownItem>
           ))
           .concat([
-            <DropdownItem key="__add_new__" className="text-primary">
+            <DropdownItem key="__add_new__" textValue="Add new setup..." className="text-primary">
               <span className="flex items-center gap-1">
                 <Icon icon="lucide:plus" className="w-4 h-4" /> Add new setup...
               </span>
@@ -4654,7 +4564,6 @@ const ExitTriggerCell: React.FC<ExitTriggerCellProps> = React.memo(function Exit
           setAvailableDefaultOptions(EXIT_TRIGGER_OPTIONS);
         }
       } catch (error) {
-        console.error('Error loading exit trigger options:', error);
         setAvailableDefaultOptions(EXIT_TRIGGER_OPTIONS);
       }
     };
@@ -4752,7 +4661,7 @@ const ExitTriggerCell: React.FC<ExitTriggerCellProps> = React.memo(function Exit
             </DropdownItem>
           ))
           .concat([
-            <DropdownItem key="__add_new__" className="text-primary">
+            <DropdownItem key="__add_new__" textValue="Add new exit trigger..." className="text-primary">
               <span className="flex items-center gap-1">
                 <Icon icon="lucide:plus" className="w-4 h-4" /> Add new exit trigger...
               </span>
@@ -4792,8 +4701,8 @@ const PlanFollowedCell: React.FC<PlanFollowedCellProps> = ({ value, onSave }) =>
           onSave(selectedKey === "Yes");
         }}
       >
-        <DropdownItem key="Yes">Yes</DropdownItem>
-        <DropdownItem key="No">No</DropdownItem>
+        <DropdownItem key="Yes" textValue="Yes">Yes</DropdownItem>
+        <DropdownItem key="No" textValue="No">No</DropdownItem>
       </DropdownMenu>
     </Dropdown>
   );

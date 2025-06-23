@@ -171,4 +171,4 @@ export const modalVariants: Variants = {
       duration: 0.15
     }
   }
-}; 
+};

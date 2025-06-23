@@ -85,7 +85,6 @@ export const useAccountingCalculations = (trades: Trade[]) => {
             accountingPL: totalPL
           };
         } catch (error) {
-          console.warn(`Error calculating P/L for trade ${originalId}:`, error);
           return {
             ...representativeTrade,
             id: originalId,
@@ -102,7 +101,6 @@ export const useAccountingCalculations = (trades: Trade[]) => {
             accountingPL: calculateAccountingPL(trade)
           };
         } catch (error) {
-          console.warn(`Error calculating P/L for trade ${trade.id}:`, error);
           return {
             ...trade,
             accountingPL: 0
@@ -135,10 +133,10 @@ export const useAccountingCalculations = (trades: Trade[]) => {
       : 0;
 
     // Position size and holding period calculations
-    const avgPositionSize = totalTrades > 0 
-      ? tradesWithAccountingPL.reduce((sum, t) => sum + (t.allocation || 0), 0) / totalTrades 
+    const avgPositionSize = totalTrades > 0
+      ? tradesWithAccountingPL.reduce((sum, t) => sum + (t.allocation || 0), 0) / totalTrades
       : 0;
-    
+
     // Average holding days - always use FIFO logic regardless of accounting method
     const avgHoldingDays = totalTrades > 0
       ? tradesWithAccountingPL.reduce((sum, trade) => {
@@ -178,16 +176,16 @@ export const useAccountingCalculations = (trades: Trade[]) => {
       : 0;
 
     // Risk-reward calculations
-    const avgR = totalTrades > 0 
+    const avgR = totalTrades > 0
       ? tradesWithAccountingPL.reduce((sum, trade) => {
           const r = trade.r || 0;
           return sum + r;
-        }, 0) / totalTrades 
+        }, 0) / totalTrades
       : 0;
 
     // Plan adherence
-    const planFollowed = totalTrades > 0 
-      ? (tradesWithAccountingPL.filter(t => t.planFollowed).length / totalTrades) * 100 
+    const planFollowed = totalTrades > 0
+      ? (tradesWithAccountingPL.filter(t => t.planFollowed).length / totalTrades) * 100
       : 0;
 
     // Open positions - use positionStatus instead of exitDate (already using deduplicated trades)
@@ -230,8 +228,8 @@ export const useAccountingMethodDisplay = () => {
     accountingMethod,
     useCashBasis,
     displayName: useCashBasis ? 'Cash Basis' : 'Accrual Basis',
-    description: useCashBasis 
-      ? 'P/L attributed to exit dates' 
+    description: useCashBasis
+      ? 'P/L attributed to exit dates'
       : 'P/L attributed to entry dates',
     shortDescription: useCashBasis ? 'Exit-based' : 'Entry-based'
   };

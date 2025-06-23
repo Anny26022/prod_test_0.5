@@ -56,20 +56,18 @@ export class MigrationService {
       // Step 1: Migrate Trades
       currentStep++
       updateProgress('trades', 'Migrating trades...')
-      
+
       try {
         const trades = await DatabaseService.getAllTrades()
 
-        
         if (trades.length > 0) {
           const success = await SupabaseService.saveAllTrades(trades)
           if (!success) {
             throw new Error('Failed to save trades to Supabase')
           }
         }
-        
-        console.log('✅ Trades migrated successfully')
-      } catch (error) {
+
+        } catch (error) {
         const errorMsg = `Failed to migrate trades: ${error}`
         updateProgress('trades', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -78,7 +76,7 @@ export class MigrationService {
       // Step 2: Migrate User Preferences
       currentStep++
       updateProgress('userPreferences', 'Migrating user preferences...')
-      
+
       try {
         const preferences = await DatabaseService.getUserPreferences()
         if (preferences) {
@@ -87,8 +85,7 @@ export class MigrationService {
             throw new Error('Failed to save user preferences to Supabase')
           }
         }
-        console.log('✅ User preferences migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate user preferences: ${error}`
         updateProgress('userPreferences', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -97,7 +94,7 @@ export class MigrationService {
       // Step 3: Migrate Portfolio Data
       currentStep++
       updateProgress('portfolioData', 'Migrating portfolio data...')
-      
+
       try {
         const portfolioData = await DatabaseService.getPortfolioData()
         if (portfolioData && portfolioData.length > 0) {
@@ -106,8 +103,7 @@ export class MigrationService {
             throw new Error('Failed to save portfolio data to Supabase')
           }
         }
-        console.log('✅ Portfolio data migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate portfolio data: ${error}`
         updateProgress('portfolioData', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -116,7 +112,7 @@ export class MigrationService {
       // Step 4: Migrate Tax Data
       currentStep++
       updateProgress('taxData', 'Migrating tax data...')
-      
+
       try {
         const taxData = await DatabaseService.getTaxData()
         for (const yearData of taxData) {
@@ -125,8 +121,7 @@ export class MigrationService {
             throw new Error(`Failed to save tax data for year ${yearData.year}`)
           }
         }
-        console.log('✅ Tax data migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate tax data: ${error}`
         updateProgress('taxData', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -135,7 +130,7 @@ export class MigrationService {
       // Step 5: Migrate Milestones Data
       currentStep++
       updateProgress('milestonesData', 'Migrating milestones data...')
-      
+
       try {
         const milestonesData = await DatabaseService.getMilestonesData()
         if (milestonesData && milestonesData.achievements) {
@@ -144,8 +139,7 @@ export class MigrationService {
             throw new Error('Failed to save milestones data to Supabase')
           }
         }
-        console.log('✅ Milestones data migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate milestones data: ${error}`
         updateProgress('milestonesData', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -154,7 +148,7 @@ export class MigrationService {
       // Step 6: Migrate Misc Data
       currentStep++
       updateProgress('miscData', 'Migrating miscellaneous data...')
-      
+
       try {
         // Get all misc data keys and migrate them
         const miscKeys = [
@@ -171,15 +165,12 @@ export class MigrationService {
             if (data !== null) {
               const success = await SupabaseService.saveMiscData(key, data)
               if (!success) {
-                console.warn(`Failed to migrate misc data for key: ${key}`)
-              }
+                }
             }
           } catch (error) {
-            console.warn(`Error migrating misc data for key ${key}:`, error)
-          }
+            }
         }
-        console.log('✅ Miscellaneous data migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate miscellaneous data: ${error}`
         updateProgress('miscData', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -188,19 +179,16 @@ export class MigrationService {
       // Step 7: Migrate Chart Image Blobs
       currentStep++
       updateProgress('chartImageBlobs', 'Migrating chart images...')
-      
+
       try {
         const chartBlobs = await DatabaseService.getAllChartImageBlobs()
 
-        
         for (const blob of chartBlobs) {
           const success = await SupabaseService.saveChartImageBlob(blob)
           if (!success) {
-            console.warn(`Failed to migrate chart image: ${blob.filename}`)
-          }
+            }
         }
-        console.log('✅ Chart images migrated successfully')
-      } catch (error) {
+        } catch (error) {
         const errorMsg = `Failed to migrate chart images: ${error}`
         updateProgress('chartImageBlobs', errorMsg, errorMsg)
         return { success: false, error: errorMsg }
@@ -208,14 +196,10 @@ export class MigrationService {
 
       // Migration completed successfully
       updateProgress('completed', 'Migration completed successfully!')
-      console.log('🎉 All data migrated successfully to Supabase!')
-      
       return { success: true }
 
     } catch (error) {
       const errorMsg = `Migration failed: ${error}`
-      console.error('❌ Migration failed:', error)
-      
       if (onProgress) {
         onProgress({
           step: 'error',
@@ -226,7 +210,7 @@ export class MigrationService {
           error: errorMsg
         })
       }
-      
+
       return { success: false, error: errorMsg }
     }
   }
@@ -253,7 +237,6 @@ export class MigrationService {
       // Only show migration if user has trades, charts, or portfolio data
       return hasTradeData || hasChartData || hasPortfolioInfo
     } catch (error) {
-      console.error('Error checking for data to migrate:', error)
       return false
     }
   }
@@ -282,7 +265,6 @@ export class MigrationService {
         hasPortfolioData: portfolioData.length > 0
       }
     } catch (error) {
-      console.error('Error getting migration summary:', error)
       return {
         trades: 0,
         chartImages: 0,
@@ -298,10 +280,8 @@ export class MigrationService {
   static async clearIndexedDBData(): Promise<boolean> {
     try {
       await DatabaseService.clearAllData()
-      console.log('✅ IndexedDB data cleared successfully')
       return true
     } catch (error) {
-      console.error('❌ Failed to clear IndexedDB data:', error)
       return false
     }
   }

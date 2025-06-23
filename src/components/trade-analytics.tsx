@@ -18,6 +18,7 @@ import { PerformanceMetrics } from "./analytics/performance-metrics";
 import { TradeStatistics } from "./analytics/trade-statistics";
 import { TopPerformers } from "./analytics/top-performers";
 import { PerformanceChart } from "./analytics/performance-chart";
+import { DrawdownCurve } from "./analytics/drawdown-curve";
 import { useTrades } from "../hooks/use-trades";
 import { useDashboardConfig } from "../hooks/use-dashboard-config";
 import { pageVariants, cardVariants, fadeInVariants } from "../utils/animations";
@@ -193,6 +194,17 @@ export const TradeAnalytics = React.memo(function TradeAnalytics() {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Drawdown Analysis Section */}
+      {getWidgetVisibility('drawdown-curve') && (
+        <motion.div
+          variants={cardVariants}
+          initial="initial"
+          animate="animate"
+        >
+          <DrawdownCurve trades={trades} className="dark:bg-gray-900" />
+        </motion.div>
+      )}
       
       <motion.div 
         className="grid grid-cols-1 md:grid-cols-2 gap-6"

@@ -287,8 +287,8 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
 
               let dataUrl = chartImage.dataUrl;
 
-              // If no dataUrl, try to generate one
-              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId) {
+              // If no dataUrl, try to generate one (but skip temporary charts)
+              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId && !(chartImage as any).isTemporary) {
                 dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
               }
 
@@ -324,8 +324,8 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
 
               let dataUrl = chartImage.dataUrl;
 
-              // If no dataUrl, try to generate one
-              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId) {
+              // If no dataUrl, try to generate one (but skip temporary charts)
+              if (!dataUrl && chartImage.storage === 'blob' && chartImage.blobId && !(chartImage as any).isTemporary) {
                 dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
               }
 
@@ -592,6 +592,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                         inputWrapper: "h-7 min-h-7"
                       }}
                       startContent={<Icon icon="lucide:search" className="w-3 h-3 text-gray-400" />}
+                      aria-label="Search chart symbols"
                     />
 
                     {/* Symbol Dropdown */}
@@ -602,6 +603,15 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                             key={symbol}
                             className="px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-sm"
                             onMouseDown={() => handleSymbolSelect(symbol)}
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Select symbol ${symbol}`}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                handleSymbolSelect(symbol);
+                              }
+                            }}
                           >
                             {symbol}
                           </div>
@@ -741,6 +751,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                           value: "text-xs"
                         }}
                         placeholder="Type"
+                        aria-label="Filter by chart type"
                       >
                         <SelectItem key="all" value="all">All</SelectItem>
                         <SelectItem key="beforeEntry" value="beforeEntry">Entry</SelectItem>
@@ -758,6 +769,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                           value: "text-xs"
                         }}
                         placeholder="Outcome"
+                        aria-label="Filter by trade outcome"
                       >
                         <SelectItem key="all" value="all">All</SelectItem>
                         <SelectItem key="win" value="win">Win</SelectItem>
@@ -776,6 +788,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                           value: "text-xs"
                         }}
                         placeholder="Setup"
+                        aria-label="Filter by trade setup"
                       >
                         <SelectItem key="all" value="all">All</SelectItem>
                         {uniqueSetups.map((setup) => (
@@ -795,6 +808,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                           inputWrapper: "h-7 min-h-7"
                         }}
                         placeholder="From"
+                        aria-label="Filter from date"
                       />
 
                       {/* To Date */}
@@ -809,6 +823,7 @@ export const UniversalChartViewer: React.FC<UniversalChartViewerProps> = ({
                           inputWrapper: "h-7 min-h-7"
                         }}
                         placeholder="To"
+                        aria-label="Filter to date"
                       />
 
                       {/* Clear */}

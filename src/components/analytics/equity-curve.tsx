@@ -62,11 +62,11 @@ export const EquityCurve: React.FC = () => {
   const getDateRange = React.useCallback(() => {
     const now = new Date();
     const range = dateRanges.find(r => r.value === selectedRange);
-    
+
     if (!range) return { start: now, end: now };
 
     let start = new Date();
-    
+
     switch (range.value) {
       case 'YTD':
         start = new Date(now.getFullYear(), 0, 1);
@@ -167,7 +167,7 @@ export const EquityCurve: React.FC = () => {
 
   const chartData = React.useMemo(() => {
     const dataPoints = calculateEquityCurve();
-    
+
     return {
       datasets: [
         {
@@ -252,4 +252,4 @@ export const EquityCurve: React.FC = () => {
       </CardBody>
     </Card>
   );
-}; 
+};

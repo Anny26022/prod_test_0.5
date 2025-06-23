@@ -32,7 +32,6 @@ function loadGlobalFilterFromLocalStorage(): GlobalFilter {
     }
     return defaultFilter;
   } catch (error) {
-    console.error('Error loading global filter from localStorage:', error);
     return defaultFilter;
   }
 }
@@ -53,8 +52,7 @@ function saveGlobalFilterToLocalStorage(filterObj: GlobalFilter) {
 
     localStorage.setItem('globalFilter', JSON.stringify(filterToSave));
   } catch (error) {
-    console.error('Error saving global filter to localStorage:', error);
-  }
+    }
 }
 
 const GlobalFilterContext = createContext<{
@@ -97,4 +95,4 @@ export const GlobalFilterProvider: React.FC<{ children: React.ReactNode }> = ({ 
   );
 };
 
-export const useGlobalFilter = () => useContext(GlobalFilterContext); 
+export const useGlobalFilter = () => useContext(GlobalFilterContext);

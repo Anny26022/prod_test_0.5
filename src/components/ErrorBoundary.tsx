@@ -53,7 +53,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
               <p className="text-default-600">
                 The application encountered an unexpected error. Please try refreshing the page.
               </p>
-              
+
               {process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-left text-sm bg-default-100 p-3 rounded">
                   <summary className="cursor-pointer font-medium">Error Details</summary>
@@ -63,16 +63,16 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                   </pre>
                 </details>
               )}
-              
+
               <div className="flex gap-2 justify-center">
-                <Button 
-                  color="primary" 
+                <Button
+                  color="primary"
                   onPress={this.resetError}
                 >
                   Try Again
                 </Button>
-                <Button 
-                  variant="bordered" 
+                <Button
+                  variant="bordered"
                   onPress={() => window.location.reload()}
                 >
                   Refresh Page

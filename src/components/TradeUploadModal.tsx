@@ -44,7 +44,6 @@ import {
   calcRealizedPL_FIFO
 } from "../utils/tradeCalculations";
 
-
 interface TradeUploadModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -404,8 +403,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
           return parsedDate.toISOString().split('T')[0];
         }
       } catch (error) {
-        console.warn(`Failed to parse date "${cleanDateStr}" with format "${format}"`);
-      }
+        }
     }
 
     // Fallback to auto-detection if specific format fails or auto is selected
@@ -494,7 +492,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       }
     }
 
-    console.warn(`Failed to parse date: "${cleanDateStr}"`);
     return null;
   }, [selectedDateFormat]);
 
@@ -768,8 +765,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     // Apply context-aware date mapping first
     mapDateColumnsWithContext();
 
-
-
     // For each field, find the best matching header (skip date if already mapped)
     Object.entries(similarityMap).forEach(([field, keywords]) => {
       // Skip if already mapped by context-aware function
@@ -787,8 +782,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
               bestScore = score;
               bestMatch = header;
             } else {
-              console.log(`⚠️ Skipping mapping for "${field}" -> "${header}" - column appears to be empty`);
-            }
+              }
           }
         });
       });
@@ -796,7 +790,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       if (bestMatch && !Object.values(mapping).includes(bestMatch)) {
         mapping[field] = bestMatch;
         confidence[field] = bestScore;
-        console.log(`✅ Mapped "${field}" -> "${bestMatch}" (confidence: ${bestScore}%)`);
+        console.log('Mapped field:', field, 'to column:', bestMatch, 'with confidence:', bestScore);
       }
     });
 
@@ -812,8 +806,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
         complete: (results) => {
           try {
             if (results.errors && results.errors.length > 0) {
-              console.warn('CSV parsing warnings:', results.errors);
-            }
+              }
 
             if (results.data && results.data.length > 0) {
               const headers = results.data[0] as string[];
@@ -848,8 +841,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                 return;
               }
 
-              console.log(`📄 CSV parsed: ${cleanHeaders.length} columns, ${cleanRows.length} data rows`);
-
               setParsedData({
                 headers: cleanHeaders,
                 rows: cleanRows,
@@ -872,7 +863,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
               setError('The CSV file appears to be empty or invalid. Please check your file.');
             }
           } catch (error) {
-            console.error('Error processing CSV file:', error);
             setError('Failed to process the CSV file. Please check the file format and try again.');
           }
         },
@@ -888,8 +878,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
         dynamicTyping: false, // Disable automatic type conversion for better control
         fastMode: true, // Enable fast mode for better performance
         error: (error) => {
-          console.error('CSV parsing error:', error);
-          setError(`CSV parsing failed: ${error.message}`);
+          setError('CSV parsing failed: ' + error.message);
         }
       });
     } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
@@ -901,7 +890,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-          
+
           if (jsonData.length > 0) {
             const headers = jsonData[0] as string[];
             const rows = jsonData.slice(1);
@@ -925,8 +914,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
               );
             });
 
-            console.log(`📊 Excel parsed: ${cleanHeaders.length} columns, ${cleanRows.length} data rows`);
-
             setParsedData({
               headers: cleanHeaders,
               rows: cleanRows,
@@ -947,7 +934,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
             }
           }
         } catch (error) {
-          console.error('Error parsing Excel file:', error);
+          setError('Excel parsing failed: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       };
       reader.readAsArrayBuffer(file);
@@ -957,10 +944,10 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragActive(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     const file = files[0];
-    
+
     if (file && (file.name.endsWith('.csv') || file.name.endsWith('.xlsx') || file.name.endsWith('.xls'))) {
       handleFileUpload(file);
     }
@@ -1112,7 +1099,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       }
     }
 
-    console.log(`📋 Preview generated: ${trades.length} valid trades from first ${previewRows.length} rows`);
     setPreviewTrades(trades);
     setStep('preview');
   }, [parsedData, columnMapping, recalculateTradeFields, isTradeCompletelyBlank]);
@@ -1138,8 +1124,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     for (let i = 0; i < totalRows; i += CHUNK_SIZE) {
       chunks.push(parsedData.rows.slice(i, i + CHUNK_SIZE));
     }
-
-    console.log(`🔍 Processing ${totalRows} rows in ${chunks.length} chunks...`);
 
     // Process chunks with yielding to prevent UI freezing
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
@@ -1233,7 +1217,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
             // Enhanced date parsing with multiple format support
             const parsedDate = parseDate(value);
             if (!parsedDate && value) {
-              dateParsingErrors.push(`Row ${validTradeCount + skippedBlankTrades + 1}: Invalid date "${value}" in ${field}`);
+              dateParsingErrors.push('Row ' + (validTradeCount + skippedBlankTrades + 1) + ': Invalid date "' + value + '" in ' + field);
             }
             trade[field as keyof Trade] = parsedDate || new Date().toISOString().split('T')[0];
           } else if (field === 'setup') {
@@ -1284,7 +1268,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
 
     // Show date parsing warnings if any
     if (dateParsingErrors.length > 0) {
-      const errorMessage = `Import completed with ${dateParsingErrors.length} date parsing warnings. Some dates may have been set to today's date. Check the imported trades and update dates as needed.`;
+      const errorMessage = 'Import completed with ' + dateParsingErrors.length + ' date parsing warnings. Some dates may have been set to today\'s date. Check the imported trades and update dates as needed.';
       setError(errorMessage);
 
       // Still proceed with import but show warning
@@ -1294,7 +1278,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     // Import trades
     onImport(trades);
 
-    console.log('✅ Import completed successfully');
     setImportProgress(100);
 
     // Small delay to show completion before closing
@@ -1311,8 +1294,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     }, 1000);
   }, [parsedData, columnMapping, onImport, onOpenChange, recalculateTradeFields, isTradeCompletelyBlank]);
 
-
-
   const resetModal = useCallback(() => {
     setStep('upload');
     setParsedData(null);
@@ -1323,8 +1304,6 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     setError(null);
     setSelectedDateFormat('auto');
   }, []);
-
-
 
   // Test function to verify mapping with your exact CSV format
   const testMappingWithUserFormat = useCallback(() => {
@@ -1339,13 +1318,9 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     ];
 
     const smartMapping = generateSmartMapping(userHeaders);
-    console.log('=== Test Mapping Results ===');
-    console.log('Mapped fields:', Object.keys(smartMapping.mapping).length);
-    console.log('High confidence (>90%):', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf > 90).length);
-    console.log('Medium confidence (70-90%):', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf >= 70 && conf <= 90).length);
-    console.log('Detailed mapping:', smartMapping.mapping);
-    console.log('Confidence scores:', smartMapping.confidence);
-
+    console.log('Total mappings:', Object.keys(smartMapping.mapping).length);
+    console.log('High confidence mappings:', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf > 90).length);
+    console.log('Medium confidence mappings:', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf >= 70 && conf <= 90).length);
     return smartMapping;
   }, [generateSmartMapping]);
 
@@ -1481,19 +1456,19 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                   </p>
                 </div>
               </div>
-              
+
               {/* Progress indicator */}
               <div className="flex items-center gap-2 mt-4">
                 {['upload', 'dateFormat', 'mapping', 'preview', 'importing'].map((stepName, index) => (
                   <React.Fragment key={stepName}>
-                    <div className={`flex items-center gap-2 ${
+                    <div className={'flex items-center gap-2 ' + (
                       step === stepName ? 'text-primary' :
                       ['upload', 'dateFormat', 'mapping', 'preview', 'importing'].indexOf(step) > index ? 'text-success' : 'text-foreground-400'
-                    }`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ${
+                    )}>
+                      <div className={'w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium ' + (
                         step === stepName ? 'bg-primary text-white' :
                         ['upload', 'dateFormat', 'mapping', 'preview', 'importing'].indexOf(step) > index ? 'bg-success text-white' : 'bg-default-200'
-                      }`}>
+                      )}>
                         {['upload', 'dateFormat', 'mapping', 'preview', 'importing'].indexOf(step) > index ?
                           <Icon icon="lucide:check" className="w-3 h-3" /> :
                           index + 1
@@ -1504,15 +1479,15 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                       </span>
                     </div>
                     {index < 4 && (
-                      <div className={`w-8 h-0.5 ${
+                      <div className={'w-8 h-0.5 ' + (
                         ['upload', 'dateFormat', 'mapping', 'preview', 'importing'].indexOf(step) > index ? 'bg-success' : 'bg-default-200'
-                      }`} />
+                      )} />
                     )}
                   </React.Fragment>
                 ))}
               </div>
             </ModalHeader>
-            
+
             <ModalBody className="p-6">
               <AnimatePresence mode="wait">
                 {step === 'upload' && (
@@ -1524,9 +1499,9 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                     className="space-y-6"
                   >
                     <div
-                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                      className={'border-2 border-dashed rounded-lg p-8 text-center transition-colors ' + (
                         dragActive ? 'border-primary bg-primary/5' : 'border-default-300'
-                      }`}
+                      )}
                       onDragEnter={(e) => {
                         e.preventDefault();
                         setDragActive(true);
@@ -1612,14 +1587,14 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                               startContent={<Icon icon="lucide:download" />}
                               onPress={() => {
                                 // Create sample CSV content with multiple date formats
-                                const sampleCSV = `Name,Date,Entry,Quantity,Buy/Sell,Status,Exit Price,Exit Quantity,Setup,Notes,Pyramid Date
-RELIANCE,2024-01-15,2500,10,Buy,Closed,2650,10,Breakout,Good momentum trade,
-TCS,15/01/2024,3200,5,Buy,Open,,,Support,Waiting for breakout,
-INFY,17-01-2024,1450,15,Buy,Partial,1520,5,Pullback,Partial exit taken,
-HDFC,15.01.2024,1800,8,Buy,Closed,1950,8,Reversal,Target achieved,
-WIPRO,24 Jul 24,1200,12,Buy,Open,,,Breakout,Text date format,25 Jul
-BHARTI,15 Aug 2024,850,20,Buy,Closed,920,20,Support,Full text date,
-MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,`;
+                                const sampleCSV = 'Name,Date,Entry,Quantity,Buy/Sell,Status,Exit Price,Exit Quantity,Setup,Notes,Pyramid Date\n' +
+'RELIANCE,2024-01-15,2500,10,Buy,Closed,2650,10,Breakout,Good momentum trade,\n' +
+'TCS,15/01/2024,3200,5,Buy,Open,,,Support,Waiting for breakout,\n' +
+'INFY,17-01-2024,1450,15,Buy,Partial,1520,5,Pullback,Partial exit taken,\n' +
+'HDFC,15.01.2024,1800,8,Buy,Closed,1950,8,Reversal,Target achieved,\n' +
+'WIPRO,24 Jul 24,1200,12,Buy,Open,,,Breakout,Text date format,25 Jul\n' +
+'BHARTI,15 Aug 2024,850,20,Buy,Closed,920,20,Support,Full text date,\n' +
+'MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,';
 
                                 // Create and download file
                                 const blob = new Blob([sampleCSV], { type: 'text/csv' });
@@ -1698,7 +1673,7 @@ MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,`;
                                     const columnIndex = parsedData.headers.indexOf(column);
                                     const value = columnIndex !== -1 ? row[columnIndex] : '';
                                     return value ? (
-                                      <div key={`${index}-${field}`} className="font-mono">
+                                      <div key={index + '-' + field} className="font-mono">
                                         {field}: <span className="text-primary">{value}</span>
                                       </div>
                                     ) : null;
@@ -1713,19 +1688,19 @@ MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,`;
                             {dateFormatOptions.map((option) => (
                               <div
                                 key={option.value}
-                                className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                                className={'p-4 border-2 rounded-lg cursor-pointer transition-all ' + (
                                   selectedDateFormat === option.value
                                     ? 'border-primary bg-primary/5'
                                     : 'border-default-200 hover:border-default-300'
-                                }`}
+                                )}
                                 onClick={() => setSelectedDateFormat(option.value)}
                               >
                                 <div className="flex items-center gap-3">
-                                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                  <div className={'w-4 h-4 rounded-full border-2 flex items-center justify-center ' + (
                                     selectedDateFormat === option.value
                                       ? 'border-primary bg-primary'
                                       : 'border-default-300'
-                                  }`}>
+                                  )}>
                                     {selectedDateFormat === option.value && (
                                       <div className="w-2 h-2 rounded-full bg-white"></div>
                                     )}
@@ -2007,7 +1982,7 @@ MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,`;
                         </h3>
                         <p className="text-foreground-500 mb-4">
                           {importProgress < 100
-                            ? `Processing trades... ${Math.round(importProgress)}%`
+                            ? 'Processing trades... ' + Math.round(importProgress) + '%'
                             : 'Finalizing import...'
                           }
                         </p>
@@ -2031,7 +2006,7 @@ MARUTI,12 Sep,2800,3,Buy,Open,,,Pullback,Current year assumed,`;
                 )}
               </AnimatePresence>
             </ModalBody>
-            
+
             <ModalFooter>
               <div className="flex justify-between w-full">
                 <div>

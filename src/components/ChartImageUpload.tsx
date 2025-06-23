@@ -4,7 +4,7 @@ import { Icon } from '@iconify/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChartImage } from '../types/trade';
 import { ChartImageService } from '../services/chartImageService';
-import { validateImageFile, formatFileSize, CHART_IMAGE_CONFIG } from '../utils/chartImageUtils';
+import { validateImageFile, formatFileSize, CHART_IMAGE_CONFIG, getCompressionInfo } from '../utils/chartImageUtils';
 
 interface ChartImageUploadProps {
   tradeId: string;
@@ -51,7 +51,13 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
       return chartImage; // Already has dataUrl
     }
 
-    // Get dataUrl from service
+    // For temporary charts, don't try to fetch from service (they're not in Supabase yet)
+    if ((chartImage as any).isTemporary) {
+      console.warn(`⚠️ [ENSURE_DATAURL] Temporary chart missing dataUrl: ${chartImage.filename}`);
+      return chartImage; // Return as-is, should have been set by service
+    }
+
+    // Get dataUrl from service for saved charts
     const dataUrl = await ChartImageService.getChartImageDataUrl(chartImage);
     return {
       ...chartImage,
@@ -70,12 +76,25 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
   // Load preview URL for current image
   React.useEffect(() => {
     if (currentImage) {
+      console.log(`🔍 [PREVIEW] Processing currentImage for ${imageType}:`, {
+        filename: currentImage.filename,
+        hasDataUrl: !!currentImage.dataUrl,
+        isTemporary: !!(currentImage as any).isTemporary,
+        storage: currentImage.storage
+      });
 
-      // If the image already has a dataUrl (loaded from database), use it directly
+      // If the image already has a dataUrl (temporary or loaded from database), use it directly
       if (currentImage.dataUrl) {
         setPreviewUrl(currentImage.dataUrl);
+        console.log(`📷 [PREVIEW] Using dataUrl for ${imageType}:`, currentImage.filename);
+      } else if ((currentImage as any).isTemporary) {
+        // For temporary images without dataUrl, show error
+        setPreviewUrl(null);
+        setError('Temporary chart image missing preview data');
+        console.warn(`⚠️ [PREVIEW] Temporary image missing dataUrl for ${imageType}:`, currentImage.filename);
       } else {
-        // Otherwise, fetch from service
+        // For saved images, fetch from service
+        console.log(`🔍 [PREVIEW] Fetching from service for ${imageType}:`, currentImage.filename);
 
         // Clear any existing error state
         setError(null);
@@ -85,21 +104,20 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
             // Add a small delay to ensure the data URL is fully ready
             setTimeout(() => {
               setPreviewUrl(url);
-
+              console.log(`✅ [PREVIEW] Successfully loaded from service for ${imageType}`);
             }, 100);
           } else {
-
             setPreviewUrl(null);
             setError('Failed to load image from cloud storage');
+            console.error(`❌ [PREVIEW] Failed to load from service for ${imageType}`);
           }
         }).catch(error => {
-
           setPreviewUrl(null);
           setError('Failed to load image preview');
+          console.error(`❌ [PREVIEW] Error loading from service for ${imageType}:`, error);
         });
       }
     } else {
-
       setPreviewUrl(null);
     }
   }, [currentImage, imageType]);
@@ -444,9 +462,23 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
           </div>
           {currentImage && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
-                {formatFileSize(currentImage.size)}
-              </span>
+              <div className="text-right">
+                <div className="text-xs text-gray-500">
+                  {formatFileSize(currentImage.size)}
+                </div>
+                {(() => {
+                  const compressionInfo = getCompressionInfo(currentImage);
+                  if (compressionInfo.isCompressed && compressionInfo.compressionText) {
+                    return (
+                      <div className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                        <Icon icon="lucide:zap" className="w-3 h-3" />
+                        {compressionInfo.compressionText}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
               <Button
                 isIconOnly
                 variant="light"
@@ -560,6 +592,15 @@ export const ChartImageUpload: React.FC<ChartImageUploadProps> = ({
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onClick={openFileDialog}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Upload ${title} by dropping file or clicking`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      openFileDialog();
+                    }
+                  }}
                 >
                   {isUploading ? (
                     <div className="space-y-3">

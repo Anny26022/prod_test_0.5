@@ -130,7 +130,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen = true, onClose, on
           setError('Password must be at least 6 characters long')
           return
         }
-        
+
         const { error } = await signUp(email, password, firstName, lastName)
         if (error) {
           setError(getAuthErrorMessage({ message: error } as any))

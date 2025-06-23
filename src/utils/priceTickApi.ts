@@ -52,13 +52,13 @@ export const getTodayMarketClose = (): Date => {
 export const isMarketOpen = (): boolean => {
   const now = new Date();
   const day = now.getDay();
-  
+
   // Market is open Monday (1) to Friday (5)
   if (day === 0 || day === 6) return false; // Sunday (0) or Saturday (6) are always closed
-  
+
   const hours = now.getHours();
   const minutes = now.getMinutes();
-  
+
   // Market hours: 9:08 AM to 3:30 PM IST
   if (hours < 9 || (hours === 9 && minutes < 8)) {
     return false;
@@ -66,7 +66,7 @@ export const isMarketOpen = (): boolean => {
   if (hours > 15 || (hours === 15 && minutes > 30)) {
     return false;
   }
-  
+
   return true;
 };
 
@@ -225,7 +225,6 @@ const retryWithBackoff = async <T>(
 
       // Calculate delay with exponential backoff
       const delay = baseDelay * Math.pow(2, attempt);
-      console.warn(`API call failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms...`, error);
 
       // Wait before retrying
       await new Promise(resolve => setTimeout(resolve, delay));
@@ -273,7 +272,6 @@ export const fetchPriceTicks = async (
       from.setDate(from.getDate() - 45); // Go back ~45 days to ensure we get 30 working days
       from.setHours(9, 15, 59, 0); // Market open time
 
-      console.log(`[fetchPriceTicks] Weekend mode: Using ${actualInterval} interval from ${from.toISOString()} to ${to.toISOString()}`);
     } else if (isAfterHours && !fromDate && !toDate) {
       // After-hours weekday (12:00 AM to 9:15 AM): Use previous trading day's data
       actualInterval = interval || '1m';
@@ -290,22 +288,18 @@ export const fetchPriceTicks = async (
       to.setHours(23, 59, 59, 999); // Full day data
       // Alternative: to.setHours(15, 30, 0, 0); // Market close only
 
-      console.log(`[fetchPriceTicks] After-hours weekday mode: Using ${actualInterval} interval from ${from.toISOString()} to ${to.toISOString()}`);
-      console.log(`[fetchPriceTicks] System date: ${now.toDateString()}, Using trading day: ${previousTradingDay.toDateString()}`);
     } else if (!fromDate && !toDate) {
       // Normal weekday during/after market hours: Use current day
       actualInterval = interval || '1m';
       from = getTodayMarketOpen();
       to = new Date();
 
-      console.log(`[fetchPriceTicks] Normal weekday mode: Using ${actualInterval} interval from ${from.toISOString()} to ${to.toISOString()}`);
     } else {
       // Explicit dates provided
       actualInterval = interval || '1m';
       from = fromDate || getTodayMarketOpen();
       to = toDate || new Date();
 
-      console.log(`[fetchPriceTicks] Custom date mode: Using ${actualInterval} interval from ${from.toISOString()} to ${to.toISOString()}`);
     }
 
     // Format dates to match the required API format (YYYY-MM-DDTHH:mm:ss+05:30)
@@ -321,8 +315,6 @@ export const fetchPriceTicks = async (
 
     // Updated to use the correct API URL format with dynamic interval
     const url = `https://api-v2.strike.money/v2/api/equity/priceticks?candleInterval=${actualInterval}&from=${fromStr}&to=${toStr}&securities=${encodedSymbol}`;
-
-    console.log(`[fetchPriceTicks] Making API call to: ${url}`);
 
     const response = await fetch(url, {
       method: 'GET',
@@ -349,13 +341,10 @@ export const fetchPriceTicks = async (
     if (!response.ok) {
       const errorText = await response.text();
       const errorMessage = `API request failed with status ${response.status}: ${errorText}`;
-      console.error(`[fetchPriceTicks] ${errorMessage}`);
       throw new Error(errorMessage);
     }
 
     const data = await response.json();
-    console.log(`[fetchPriceTicks] Successfully fetched data for ${symbol}:`, data);
-
     // Store Friday's close price if today is Friday and market is closed
     // This logic is still relevant for potential caching but won't prevent calls
     if (isFriday(now) && now > getTodayMarketClose()) {
@@ -397,8 +386,6 @@ export const fetchPriceTicksWithFallback = async (
 
   for (const baseUrl of fallbackUrls) {
     try {
-      console.log(`[fetchPriceTicksWithFallback] Trying ${baseUrl}...`);
-
       const now = getCurrentISTDate();
       const isWeekend = isWeekendIST();
       const isAfterHours = isAfterHoursWeekday();
@@ -456,7 +443,6 @@ export const fetchPriceTicksWithFallback = async (
 
       if (response.ok) {
         const data = await response.json();
-        console.log(`[fetchPriceTicksWithFallback] Success with ${baseUrl}`);
         return data;
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -464,12 +450,10 @@ export const fetchPriceTicksWithFallback = async (
 
     } catch (error) {
       lastError = error as Error;
-      console.warn(`[fetchPriceTicksWithFallback] Failed with ${baseUrl}:`, error);
       continue;
     }
   }
 
-  console.error('[fetchPriceTicksWithFallback] All fallback URLs failed');
   throw lastError || new Error('All API endpoints failed');
 };
 
@@ -486,38 +470,28 @@ export const fetchPriceTicksSmart = async (
   const isNightHours = isProblematicNightHours();
 
   if (isNightHours) {
-    console.log(`[fetchPriceTicksSmart] Problematic night hours detected (3:55-9:15 AM), prioritizing historical fallback for ${symbol}`);
-
     try {
       // Try historical fallback first during night hours
       return await fetchPriceTicksWithHistoricalFallback(symbol);
     } catch (historicalError) {
-      console.warn(`[fetchPriceTicksSmart] Historical fallback failed during night hours for ${symbol}, trying regular APIs:`, historicalError);
-
       try {
         // If historical fails, try primary API
         return await fetchPriceTicks(symbol, fromDate, toDate, interval);
       } catch (primaryError) {
-        console.warn(`[fetchPriceTicksSmart] Primary API failed for ${symbol}, trying secondary fallback:`, primaryError);
         // If primary fails, try secondary fallback
         return await fetchPriceTicksWithFallback(symbol, fromDate, toDate, interval);
       }
     }
   } else {
     // Normal hours: use regular priority order
-    console.log(`[fetchPriceTicksSmart] Normal hours, using regular API priority for ${symbol}`);
-
     try {
       // Try primary API first
       return await fetchPriceTicks(symbol, fromDate, toDate, interval);
     } catch (primaryError) {
-      console.warn(`[fetchPriceTicksSmart] Primary API failed for ${symbol}, trying secondary fallback:`, primaryError);
-
       try {
         // If primary fails, try secondary fallback
         return await fetchPriceTicksWithFallback(symbol, fromDate, toDate, interval);
       } catch (fallbackError) {
-        console.warn(`[fetchPriceTicksSmart] Secondary fallback failed for ${symbol}, trying historical fallback:`, fallbackError);
         // If all else fails, try historical fallback
         return await fetchPriceTicksWithHistoricalFallback(symbol);
       }
@@ -532,8 +506,6 @@ export const fetchPriceTicksSmart = async (
 export const fetchPriceTicksWithHistoricalFallback = async (
   symbol: string
 ): Promise<PriceTicksResponse> => {
-  console.log(`[fetchPriceTicksWithHistoricalFallback] Using historical daily data fallback for ${symbol}`);
-
   const now = getCurrentISTDate();
   const currentDate = new Date(now);
 
@@ -559,9 +531,6 @@ export const fetchPriceTicksWithHistoricalFallback = async (
 
   // Use daily interval for historical data
   const url = `https://api-v2.strike.money/v2/api/equity/priceticks?candleInterval=1d&from=${fromStr}&to=${toStr}&securities=${encodedSymbol}`;
-
-  console.log(`[fetchPriceTicksWithHistoricalFallback] Historical fallback URL: ${url}`);
-  console.log(`[fetchPriceTicksWithHistoricalFallback] Date range: ${from.toDateString()} to ${to.toDateString()}`);
 
   try {
     const response = await fetch(url, {
@@ -590,19 +559,15 @@ export const fetchPriceTicksWithHistoricalFallback = async (
     }
 
     const data = await response.json();
-    console.log(`[fetchPriceTicksWithHistoricalFallback] Successfully fetched historical data for ${symbol}`);
-
     // Verify we got data
     const ticks = data.data?.ticks?.[symbol.toUpperCase()];
     if (!ticks || ticks.length === 0) {
       throw new Error(`No historical data available for ${symbol}`);
     }
 
-    console.log(`[fetchPriceTicksWithHistoricalFallback] Found ${ticks.length} historical data points for ${symbol}`);
     return data;
 
   } catch (error) {
-    console.error(`[fetchPriceTicksWithHistoricalFallback] Historical fallback failed for ${symbol}:`, error);
     throw error;
   }
 };
@@ -645,13 +610,6 @@ export const testApiUrlConstruction = (symbol: string = 'TATACOMM'): {
   const weekendFromStr = formatForApi(weekendFrom);
   const weekendToStr = formatForApi(weekendTo);
   const weekendUrl = `https://api-v2.strike.money/v2/api/equity/priceticks?candleInterval=1d&from=${weekendFromStr}&to=${weekendToStr}&securities=${encodedSymbol}`;
-
-  console.log('=== API URL Construction Test ===');
-  console.log('Normal Weekday (Market Hours):', weekdayUrl);
-  console.log('After-Hours Weekday (12AM-9:15AM):', afterHoursUrl);
-  console.log('Weekend (Historical Data):', weekendUrl);
-  console.log('Your weekend example:', 'https://api-v2.strike.money/v2/api/equity/priceticks?candleInterval=1d&from=2023-11-29T09%3A15%3A59%2B05%3A30&to=2025-06-13T23%3A59%3A59%2B05%3A30&securities=EQ%3ATATACOMM');
-  console.log('Weekend URL Match:', weekendUrl === 'https://api-v2.strike.money/v2/api/equity/priceticks?candleInterval=1d&from=2023-11-29T09%3A15%3A59%2B05%3A30&to=2025-06-13T23%3A59%3A59%2B05%3A30&securities=EQ%3ATATACOMM');
 
   return {
     weekday: weekdayUrl,

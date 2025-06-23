@@ -35,8 +35,7 @@ export const useMilestones = () => {
           setAchievedMilestones(milestonesRecord.achievements);
         }
       } catch (error) {
-        console.error('❌ Error loading achieved milestones from Supabase:', error);
-      } finally {
+        } finally {
         setIsLoading(false);
       }
     };
@@ -107,4 +106,4 @@ export const useMilestones = () => {
     ALL_MILESTONES,
     isLoading,
   };
-}; 
+};

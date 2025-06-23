@@ -74,8 +74,6 @@ const TradeHeatmap: React.FC<TradeHeatmapProps> = ({ trades, startDate, endDate,
     count: data[date],
   }));
 
-
-
   // Convert string dates to Date objects for CalendarHeatmap
   // Handle invalid date formats and provide fallbacks
   let startDateObj: Date;
@@ -97,15 +95,11 @@ const TradeHeatmap: React.FC<TradeHeatmapProps> = ({ trades, startDate, endDate,
   const earliestTradeDate = tradeDatesArray[0] || '2024-01-01';
   const latestTradeDate = tradeDatesArray[tradeDatesArray.length - 1] || new Date().toISOString().split('T')[0];
 
-
-
   // Create start date with validation
   startDateObj = createValidDate(startDate, earliestTradeDate);
 
   // Create end date with validation
   endDateObj = createValidDate(endDate, latestTradeDate);
-
-
 
   // Validate the final Date objects before using them
   if (isNaN(startDateObj.getTime())) {
@@ -225,7 +219,7 @@ const TradeHeatmap: React.FC<TradeHeatmapProps> = ({ trades, startDate, endDate,
           horizontal={true}
           gutterSize={5}
           monthLabels={[
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
           ]}
         />
@@ -234,4 +228,4 @@ const TradeHeatmap: React.FC<TradeHeatmapProps> = ({ trades, startDate, endDate,
   );
 };
 
-export default TradeHeatmap; 
+export default TradeHeatmap;

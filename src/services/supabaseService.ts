@@ -178,7 +178,10 @@ export class SupabaseService {
   static async getAllTrades(): Promise<Trade[]> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return empty array silently for guest mode
+        return []
+      }
 
       const { data, error } = await supabase
         .from('trades')
@@ -198,7 +201,10 @@ export class SupabaseService {
   static async getTrade(id: string): Promise<Trade | null> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return null silently for guest mode
+        return null
+      }
 
       // Convert legacy ID to UUID for lookup
       const uuid = convertToUUID(id)
@@ -227,7 +233,10 @@ export class SupabaseService {
   static async getTradeFromSupabaseOnly(id: string): Promise<Trade | null> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return null silently for guest mode
+        return null
+      }
 
       const { data, error } = await supabase
         .from('trades')
@@ -248,7 +257,10 @@ export class SupabaseService {
   static async saveTrade(trade: Trade): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return false silently for guest mode
+        return false
+      }
 
       const dbRow = tradeToDbRow(trade, userId)
       const uuid = dbRow.id
@@ -449,7 +461,10 @@ export class SupabaseService {
   static async getTradeSettings(): Promise<any | null> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return null silently for guest mode
+        return null
+      }
 
       const { data, error } = await supabase
         .from('trade_settings')
@@ -469,7 +484,10 @@ export class SupabaseService {
   static async saveTradeSettings(settings: any): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return false silently for guest mode
+        return false
+      }
 
       const { error } = await supabase
         .from('trade_settings')
@@ -542,7 +560,10 @@ export class SupabaseService {
   static async getMilestonesData(): Promise<any | null> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return null silently for guest mode
+        return null
+      }
 
       const { data, error } = await supabase
         .from('milestones_data')
@@ -562,7 +583,10 @@ export class SupabaseService {
   static async saveMilestonesData(achievements: any[]): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return false silently for guest mode
+        return false
+      }
 
       const { error } = await supabase
         .from('milestones_data')
@@ -588,7 +612,10 @@ export class SupabaseService {
   static async getMiscData(key: string): Promise<any> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return null silently for guest mode
+        return null
+      }
 
       const { data, error } = await supabase
         .from('misc_data')
@@ -609,7 +636,10 @@ export class SupabaseService {
   static async saveMiscData(key: string, value: any): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return false silently for guest mode
+        return false
+      }
 
       const { error } = await supabase
         .from('misc_data')
@@ -633,7 +663,10 @@ export class SupabaseService {
   static async deleteMiscData(key: string): Promise<boolean> {
     try {
       const userId = await AuthService.getUserId()
-      if (!userId) throw new Error('User not authenticated')
+      if (!userId) {
+        // User not authenticated - return false silently for guest mode
+        return false
+      }
 
       const { error } = await supabase
         .from('misc_data')
@@ -642,7 +675,6 @@ export class SupabaseService {
         .eq('key', key)
 
       if (error) throw error
-
 
       return true
     } catch (error) {

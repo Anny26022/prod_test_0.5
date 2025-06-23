@@ -41,8 +41,7 @@ export const AuthDebug: React.FC = () => {
         <button
           onClick={async () => {
             const { data } = await supabase.auth.getSession()
-            console.log('Current session:', data.session)
-          }}
+            }}
           className="mt-2 px-2 py-1 bg-blue-600 rounded text-xs"
         >
           Check Session

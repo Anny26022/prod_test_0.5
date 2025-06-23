@@ -44,7 +44,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Sign up error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -65,7 +64,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Sign in error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -92,7 +90,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error(`${provider} sign in error:`, error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -103,14 +100,13 @@ export class AuthService {
   static async signOut() {
     try {
       const { error } = await supabase.auth.signOut()
-      
+
       if (error) {
         throw error
       }
 
       return { error: null }
     } catch (error) {
-      console.error('Sign out error:', error)
       return { error: error as AuthError }
     }
   }
@@ -130,7 +126,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Password reset error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -150,7 +145,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Update password error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -171,7 +165,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Resend verification error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -202,7 +195,7 @@ export class AuthService {
   /**
    * Update user profile
    */
-  static async updateProfile(updates: { 
+  static async updateProfile(updates: {
     email?: string
     firstName?: string
     lastName?: string
@@ -213,8 +206,8 @@ export class AuthService {
         data: {
           first_name: updates.firstName,
           last_name: updates.lastName,
-          full_name: updates.firstName && updates.lastName 
-            ? `${updates.firstName} ${updates.lastName}` 
+          full_name: updates.firstName && updates.lastName
+            ? `${updates.firstName} ${updates.lastName}`
             : updates.firstName || updates.lastName || '',
         }
       })
@@ -225,7 +218,6 @@ export class AuthService {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Update profile error:', error)
       return { data: null, error: error as AuthError }
     }
   }
@@ -240,7 +232,7 @@ export class AuthService {
       if (error) {
         // Don't log session missing errors as they're expected on initial load
         if (error.message !== 'Auth session missing!') {
-          console.error('Get current user error:', error)
+          console.error('Auth error getting user:', error)
         }
         throw error
       }
@@ -250,7 +242,7 @@ export class AuthService {
       // Only log non-session-missing errors
       const authError = error as AuthError
       if (authError.message !== 'Auth session missing!') {
-        console.error('Get current user error:', error)
+        console.error('Auth error in getCurrentUser:', authError)
       }
       return { user: null, error: authError }
     }
@@ -262,14 +254,13 @@ export class AuthService {
   static async getCurrentSession() {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
-      
+
       if (error) {
         throw error
       }
 
       return { session, error: null }
     } catch (error) {
-      console.error('Get current session error:', error)
       return { session: null, error: error as AuthError }
     }
   }
@@ -303,14 +294,13 @@ export class AuthService {
   static async refreshSession() {
     try {
       const { data, error } = await supabase.auth.refreshSession()
-      
+
       if (error) {
         throw error
       }
 
       return { data, error: null }
     } catch (error) {
-      console.error('Refresh session error:', error)
       return { data: null, error: error as AuthError }
     }
   }

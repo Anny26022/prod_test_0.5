@@ -53,7 +53,6 @@ export const PriceTicker: React.FC<PriceTickerProps> = ({
     );
   }
 
-
   if (error) {
     return (
       <div className="p-2 text-red-500 text-sm">
@@ -96,7 +95,7 @@ export const PriceTicker: React.FC<PriceTickerProps> = ({
           )}
         </div>
       )}
-      
+
       <div className="overflow-x-auto">
         <Table removeWrapper aria-label="Price Ticks" className="min-w-full">
           <TableHeader>
@@ -114,7 +113,7 @@ export const PriceTicker: React.FC<PriceTickerProps> = ({
               const isUp = tick.close > tick.open;
               const change = tick.close - tick.open;
               const changePercent = (change / tick.open) * 100;
-              
+
               return (
                 <TableRow key={`${tick.dateTime}-${index}`}>
                   <TableCell className="text-xs">{formatTime(tick.dateTime)}</TableCell>

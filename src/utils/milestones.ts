@@ -212,4 +212,4 @@ export const ALL_MILESTONES: Milestone[] = [
       return totalRealizedPL >= 1000000;
     },
   },
-]; 
+];

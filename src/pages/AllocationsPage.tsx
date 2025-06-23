@@ -5,7 +5,7 @@ import { useTruePortfolioWithTrades } from '../hooks/use-true-portfolio-with-tra
 import { Icon } from '@iconify/react';
 
 // Assuming Trade type is available from useTrades or a common types file
-// import { Trade } from '../types/trade'; 
+// import { Trade } from '../types/trade';
 
 // Placeholder type if not explicitly imported
 interface Trade {
@@ -14,7 +14,6 @@ interface Trade {
     positionStatus: "Open" | "Closed" | "Partial";
     positionSize: number; // Assuming positionSize is available
 }
-
 
 const AllocationsPage: React.FC = () => {
     const { trades, isLoading } = useTrades();
@@ -34,7 +33,7 @@ const AllocationsPage: React.FC = () => {
         // Assuming allocation is (positionSize / portfolioSize) * 100
         const tradesWithAllocation = openAndPartialTrades.map(trade => ({
             ...trade,
-            calculatedAllocation: trade.positionSize && portfolioSize > 0 
+            calculatedAllocation: trade.positionSize && portfolioSize > 0
                 ? (trade.positionSize / portfolioSize) * 100
                 : 0
         }));
@@ -70,7 +69,7 @@ const AllocationsPage: React.FC = () => {
                 return `${(cellValue as number).toFixed(2)}%`;
             case 'positionStatus':
                 return (
-                    <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium 
+                    <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium
                         ${item.positionStatus === 'Open' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                          item.positionStatus === 'Partial' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
@@ -83,7 +82,6 @@ const AllocationsPage: React.FC = () => {
                 return String(cellValue);
         }
     };
-
 
     return (
         <div className="p-6 space-y-6">
@@ -113,9 +111,9 @@ const AllocationsPage: React.FC = () => {
                                 </TableColumn>
                             )}
                         </TableHeader>
-                        <TableBody 
-                            items={topAllocations} 
-                            isLoading={isLoading} 
+                        <TableBody
+                            items={topAllocations}
+                            isLoading={isLoading}
                             emptyContent={
                                 isLoading ? " " : (
                                     <div className="flex flex-col items-center justify-center py-8 px-4 text-center">
@@ -149,4 +147,4 @@ const AllocationsPage: React.FC = () => {
     );
 };
 
-export default AllocationsPage; 
+export default AllocationsPage;

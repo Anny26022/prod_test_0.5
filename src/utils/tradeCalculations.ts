@@ -66,10 +66,10 @@ export function calcStockMove(
   } else if (positionStatus === 'Partial') {
     // For partial positions, calculate weighted average of realized and unrealized moves
     if (!cmp || cmp <= 0 || !avgExit || avgExit <= 0) return 0; // Enhanced edge case handling
-    
+
     const realizedMove = ((avgExit - avgEntry) / avgEntry) * 100;
     const unrealizedMove = ((cmp - avgEntry) / avgEntry) * 100;
-    
+
     // Calculate weighted average based on quantities
     movePercentage = (
       (realizedMove * exitedQty + unrealizedMove * openQty) / totalQty
@@ -91,7 +91,7 @@ export function calcRewardRisk(
   buySell: 'Buy' | 'Sell' = 'Buy'
 ): number {
   if (!entry || !sl) return 0;
-  
+
   const totalQty = openQty + exitedQty;
   if (totalQty === 0) return 0;
 
@@ -100,7 +100,7 @@ export function calcRewardRisk(
   if (risk === 0) return 0;
 
   let reward = 0;
-  
+
   if (positionStatus === 'Open') {
     // For open positions, use target price for potential reward
     reward = buySell === 'Buy' ? target - entry : entry - target;
@@ -111,7 +111,7 @@ export function calcRewardRisk(
     // For partial positions, calculate weighted average of realized and potential reward
     const realizedReward = buySell === 'Buy' ? avgExit - entry : entry - avgExit;
     const potentialReward = buySell === 'Buy' ? target - entry : entry - target;
-    
+
     reward = (realizedReward * exitedQty + potentialReward * openQty) / totalQty;
   }
 
@@ -132,28 +132,28 @@ interface TradeLeg {
  */
 function calculateWeightedHoldingDays(trades: TradeLeg[]): number {
   if (!trades.length) return 0;
-  
+
   let totalDays = 0;
   let totalQuantity = 0;
-  
+
   for (const trade of trades) {
     if (!trade.entryDate) continue;
-    
+
     const entryDate = new Date(trade.entryDate);
     if (isNaN(entryDate.getTime())) continue;
-    
+
     const exitDate = trade.exitDate ? new Date(trade.exitDate) : new Date();
     if (trade.exitDate && isNaN(exitDate.getTime())) continue;
-    
+
     // Normalize dates to start of day
     entryDate.setHours(0, 0, 0, 0);
     exitDate.setHours(0, 0, 0, 0);
-    
+
     const daysHeld = Math.max(1, Math.ceil((exitDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24)));
     totalDays += daysHeld * trade.quantity;
     totalQuantity += trade.quantity;
   }
-  
+
   return totalQuantity > 0 ? Math.round(totalDays / totalQuantity) : 0;
 }
 
@@ -166,24 +166,24 @@ function calculateWeightedHoldingDays(trades: TradeLeg[]): number {
  * @returns Weighted average holding days across all positions
  */
 export function calcHoldingDays(
-  entryDate: string, 
+  entryDate: string,
   exitDate?: string | null,
   pyramidDates: {date: string, qty: number}[] = [],
   exitDates: {date: string, qty: number}[] = []
 ): number {
   try {
     if (!entryDate) return 0;
-    
+
     // Create trade legs for initial entry
     const tradeLegs: TradeLeg[] = [];
-    
+
     // Add initial entry
     tradeLegs.push({
       entryDate,
       exitDate: exitDate || null,
       quantity: 1 // Base quantity, will be adjusted by pyramid entries
     });
-    
+
     // Add pyramid entries
     for (const p of pyramidDates) {
       if (!p.date) continue;
@@ -193,34 +193,34 @@ export function calcHoldingDays(
         quantity: p.qty || 1
       });
     }
-    
+
     // If we have exit dates, distribute them across the trade legs
     if (exitDates.length > 0) {
       // Sort exits by date to process first exit first
-      const sortedExits = [...exitDates].sort((a, b) => 
+      const sortedExits = [...exitDates].sort((a, b) =>
         new Date(a.date).getTime() - new Date(b.date).getTime()
       );
-      
+
       // Distribute exits to trade legs (FIFO - First In First Out)
       let remainingExits = [...sortedExits];
-      
+
       for (const leg of tradeLegs) {
         if (remainingExits.length === 0) break;
-        
+
         const exit = remainingExits[0];
         leg.exitDate = exit.date;
-        
+
         // Reduce the exit quantity from this leg's quantity
         const exitQty = Math.min(leg.quantity, exit.qty);
         exit.qty -= exitQty;
-        
+
         // If this exit is fully used, remove it
         if (exit.qty <= 0) {
           remainingExits.shift();
         }
       }
     }
-    
+
     return calculateWeightedHoldingDays(tradeLegs);
   } catch (error) {
     return 0;
@@ -290,8 +290,6 @@ export function calcTradeOpenHeat(trade, defaultPortfolioSize, getPortfolioSize)
     stop = 0; // Neither entered
   }
 
-
-
   if (!entryPrice || !stop || !qty) {
     return 0;
   }
@@ -332,12 +330,12 @@ function calculateNPV(rate: number, dates: Date[], cashFlows: number[]): number 
 function calculateXIRR(dates: Date[], cashFlows: number[], guess = 0.1): number {
   const EPSILON = 0.0000001;
   const MAX_ITERATIONS = 100;
-  
+
   // Check if we have valid inputs
   if (dates.length !== cashFlows.length || dates.length < 2) {
     return 0;
   }
-  
+
   // Verify that we have at least one positive and one negative cash flow
   const hasPositive = cashFlows.some(cf => cf > 0);
   const hasNegative = cashFlows.some(cf => cf < 0);
@@ -346,31 +344,31 @@ function calculateXIRR(dates: Date[], cashFlows: number[], guess = 0.1): number 
   }
 
   let rate = guess;
-  
+
   // Newton's method implementation
   for (let i = 0; i < MAX_ITERATIONS; i++) {
     const npv = calculateNPV(rate, dates, cashFlows);
-    
+
     if (Math.abs(npv) < EPSILON) {
       return rate;
     }
-    
+
     // Calculate derivative of NPV
     const derivative = cashFlows.reduce((sum, cashFlow, j) => {
       const yearFraction = daysToYears((dates[j].getTime() - dates[0].getTime()) / (1000 * 60 * 60 * 24));
       return sum - yearFraction * cashFlow / Math.pow(1 + rate, yearFraction + 1);
     }, 0);
-    
+
     // Update rate using Newton's method
     const newRate = rate - npv / derivative;
-    
+
     if (Math.abs(newRate - rate) < EPSILON) {
       return newRate;
     }
-    
+
     rate = newRate;
   }
-  
+
   return rate;
 }
 
@@ -459,7 +457,7 @@ interface EntryMove {
 ): EntryMove[] {
   // Filter out entries with no quantity or price
   const validEntries = entries.filter(e => e.price > 0 && e.qty > 0);
-  
+
   return validEntries.map(entry => {
     let comparePrice = positionStatus === 'Open' ? cmp : avgExit;
     if (positionStatus === 'Partial') {
@@ -618,13 +616,13 @@ export function calculateDailyPortfolioValues(trades: any[], capitalChanges: any
   } else {
     // If no initial capital change on the first date, assume a sensible starting point.
     // This helps avoid zero division issues in later calculations if no explicit starting capital is provided.
-    currentCashComponent = 1000; 
+    currentCashComponent = 1000;
   }
 
   // Process each date in chronological order
   for (const date of allRelevantDates) {
     const timestamp = date.getTime();
-    
+
     // Apply capital changes for this specific date
     capitalChanges.filter(cc => {
       const d = new Date(cc.date);
@@ -798,4 +796,4 @@ export function annualizeMetric(dailyMetric: number, numPeriods: number = 252): 
   // For returns, multiply by numPeriods
   // This function is generally for converting daily volatility to annual volatility
   return dailyMetric * Math.sqrt(numPeriods);
-} 
+}

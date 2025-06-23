@@ -17,8 +17,6 @@ import { useTrades } from "../../hooks/use-trades";
 import { useTruePortfolioWithTrades } from "../../hooks/use-true-portfolio-with-trades";
 import { useAccountingMethod } from "../../context/AccountingMethodContext";
 
-
-
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -129,18 +127,18 @@ export const TaxSummaryChart: React.FC<TaxSummaryChartProps> = ({ taxesByMonth }
           margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--heroui-divider))" />
-          <XAxis 
-            dataKey="month" 
+          <XAxis
+            dataKey="month"
             axisLine={false}
             tickLine={false}
           />
-          <YAxis 
+          <YAxis
             yAxisId="left"
             tickFormatter={(value) => formatCurrency(value)}
             axisLine={false}
             tickLine={false}
           />
-          <YAxis 
+          <YAxis
             yAxisId="right"
             orientation="right"
             tickFormatter={(value) => `${value}%`}

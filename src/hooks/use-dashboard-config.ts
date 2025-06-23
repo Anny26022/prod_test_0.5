@@ -10,6 +10,7 @@ export interface DashboardWidget {
 const DEFAULT_DASHBOARD_CONFIG: DashboardWidget[] = [
   { id: 'portfolio-performance', name: 'Portfolio Performance', isVisible: true },
   { id: 'performance-metrics', name: 'Performance Metrics', isVisible: true },
+  { id: 'drawdown-curve', name: 'Drawdown Analysis', isVisible: true },
   { id: 'trade-statistics', name: 'Trade Statistics', isVisible: true },
   { id: 'top-performers', name: 'Top Performers', isVisible: true },
 ];

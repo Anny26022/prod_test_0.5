@@ -71,7 +71,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOp
   const { trades } = useTrades();
   const { achievedMilestones, ALL_MILESTONES } = useMilestones();
   const { accountingMethod, setAccountingMethod } = useAccountingMethod();
-  
+
   const [selectedTab, setSelectedTab] = useState('yearly');
   const [isYearlyCapitalModalOpen, setIsYearlyCapitalModalOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState(months[new Date().getMonth()]);
@@ -107,7 +107,7 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOp
     setNewCapitalAmount('');
     setNewCapitalDescription('');
   };
-  
+
   const handleEditCapitalChange = (changeId: string) => {
     const change = capitalChanges.find(c => c.id === changeId);
     if (change) {
@@ -878,4 +878,4 @@ export const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ isOp
       </ModalContent>
     </Modal>
   );
-}; 
+};

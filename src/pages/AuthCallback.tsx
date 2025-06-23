@@ -14,8 +14,6 @@ export const AuthCallback: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('🔄 Auth callback URL:', window.location.href)
-
         // Check URL parameters for errors first
         const searchParams = new URLSearchParams(location.search)
         const hashParams = new URLSearchParams(location.hash.substring(1))
@@ -27,15 +25,6 @@ export const AuthCallback: React.FC = () => {
         const expiresIn = hashParams.get('expires_in')
         const tokenType = hashParams.get('token_type')
 
-        console.log('🔍 URL params:', {
-          error,
-          errorDescription,
-          hasAccessToken: !!accessToken,
-          hasRefreshToken: !!refreshToken,
-          expiresIn,
-          tokenType
-        })
-
         if (error) {
           setError(errorDescription || error)
           setStatus('error')
@@ -44,8 +33,6 @@ export const AuthCallback: React.FC = () => {
 
         // Handle implicit flow with access token in hash
         if (accessToken) {
-          console.log('🔄 Processing implicit flow with access token...')
-
           try {
             // Set the session manually using the tokens from the URL
             const { data, error: setSessionError } = await supabase.auth.setSession({
@@ -54,10 +41,8 @@ export const AuthCallback: React.FC = () => {
             })
 
             if (setSessionError) {
-              console.error('❌ Set session error:', setSessionError)
               // Don't return here, fall through to session check
             } else if (data.session) {
-              console.log('✅ Implicit flow authentication successful!')
               setStatus('success')
               setTimeout(() => {
                 history.replace('/')
@@ -65,7 +50,6 @@ export const AuthCallback: React.FC = () => {
               return
             }
           } catch (setSessionError) {
-            console.error('❌ Manual session setup error:', setSessionError)
             // Continue to session check
           }
         }
@@ -73,27 +57,21 @@ export const AuthCallback: React.FC = () => {
         // Handle any URL that might contain session info
         // This covers cases where Supabase automatically processes the callback
         if (window.location.hash || window.location.search) {
-          console.log('🔄 Waiting for Supabase to process URL...')
           // Give Supabase more time to automatically process the callback
           await new Promise(resolve => setTimeout(resolve, 3000))
         }
 
         // Fallback: Check for existing session with retries
-        console.log('🔄 Checking for existing session...')
-
         let session = null
         let sessionError = null
 
         // Try multiple times to get the session
         for (let attempt = 1; attempt <= 5; attempt++) {
-          console.log(`🔄 Session check attempt ${attempt}/5`)
-
           const result = await supabase.auth.getSession()
           sessionError = result.error
           session = result.data.session
 
           if (session) {
-            console.log('✅ Session found!')
             setStatus('success')
             setTimeout(() => {
               history.replace('/')
@@ -102,7 +80,7 @@ export const AuthCallback: React.FC = () => {
           }
 
           if (sessionError) {
-            console.error(`❌ Session error on attempt ${attempt}:`, sessionError)
+            console.error('Session error on attempt', attempt, ':', sessionError)
           }
 
           // Wait before next attempt
@@ -112,7 +90,6 @@ export const AuthCallback: React.FC = () => {
         }
 
         // If we get here, no session was found after all attempts
-        console.warn('⚠️ No session found after all attempts')
         if (sessionError) {
           setError(sessionError.message)
         } else {
@@ -120,7 +97,6 @@ export const AuthCallback: React.FC = () => {
         }
         setStatus('error')
       } catch (error) {
-        console.error('❌ Auth callback error:', error)
         setError('An unexpected error occurred during authentication')
         setStatus('error')
       }

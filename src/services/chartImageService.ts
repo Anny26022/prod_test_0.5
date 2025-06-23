@@ -154,7 +154,16 @@ export class ChartImageService {
       if (!trade) {
         if (allowTemporary) {
           console.log(`📦 [${imageType.toUpperCase()}] Trade not found in cloud storage, creating temporary chart image`);
-          return { success: true, chartImage, isTemporary: true };
+
+          // CRITICAL: For temporary charts, we need to ensure they have a dataUrl for immediate preview
+          const tempChartImage = {
+            ...chartImage,
+            dataUrl: `data:${chartImage.mimeType};base64,${base64Data}`,
+            isTemporary: true
+          };
+
+          console.log(`📷 [${imageType.toUpperCase()}] Temporary chart created with dataUrl for preview: ${chartImage.filename}`);
+          return { success: true, chartImage: tempChartImage, isTemporary: true };
         }
         return { success: false, error: 'Trade not found in cloud storage' };
       }
@@ -186,7 +195,16 @@ export class ChartImageService {
       if (!supabaseTrade) {
         if (allowTemporary) {
           console.log(`📦 [${imageType.toUpperCase()}] Trade not found in Supabase trades table, creating temporary chart image`);
-          return { success: true, chartImage, isTemporary: true };
+
+          // CRITICAL: For temporary charts, we need to ensure they have a dataUrl for immediate preview
+          const tempChartImage = {
+            ...chartImage,
+            dataUrl: `data:${chartImage.mimeType};base64,${base64Data}`,
+            isTemporary: true
+          };
+
+          console.log(`📷 [${imageType.toUpperCase()}] Temporary chart created with dataUrl for preview: ${chartImage.filename}`);
+          return { success: true, chartImage: tempChartImage, isTemporary: true };
         }
         return { success: false, error: 'Trade not found in Supabase trades table' };
       }

@@ -47,7 +47,6 @@ function AppContent() {
   const [showAuthModal, setShowAuthModal] = React.useState(false);
   const [migrationChecked, setMigrationChecked] = React.useState(false);
 
-
   const mainContentRef = useRef<HTMLElement>(null);
   const [isMainContentFullscreen, setIsMainContentFullscreen] = useState(false);
 
@@ -85,7 +84,6 @@ function AppContent() {
       const prefs = await SupabaseService.getUserPreferences();
       return prefs;
     } catch (error) {
-      console.error('❌ Error fetching user preferences from Supabase:', error);
       return null;
     }
   }, []);
@@ -96,8 +94,7 @@ function AppContent() {
       const updated = { ...existing, ...prefs };
       await SupabaseService.saveUserPreferences(updated);
     } catch (error) {
-      console.error('❌ Supabase save error:', error);
-    }
+      }
   }, [fetchUserPreferences]);
 
   React.useEffect(() => {
@@ -115,7 +112,6 @@ function AppContent() {
           setUserName(getDefaultUserName());
         }
       } catch (error) {
-        console.error('❌ Failed to load user preferences:', error);
         // Set default values on error
         setUserName(getDefaultUserName());
       } finally {
@@ -178,8 +174,6 @@ function AppContent() {
     { path: "/deep-analytics", name: "Deep Analytics", icon: "lucide:pie-chart" }
   ], []);
 
-
-
   return (
     <TruePortfolioProvider>
       <AccountingMethodProvider>
@@ -191,8 +185,8 @@ function AppContent() {
               <div className="flex h-16 items-center justify-between">
                 {/* Logo and Mobile Menu Button */}
                 <div className="flex items-center gap-4">
-                  <Link 
-                    to="/" 
+                  <Link
+                    to="/"
                     className="flex items-center gap-2 font-semibold tracking-tight text-foreground hover:opacity-90 transition-opacity"
                   >
                     <svg
@@ -249,8 +243,8 @@ function AppContent() {
                         key={item.path}
                         to={item.path}
                         className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors rounded-lg
-                          ${isActive 
-                            ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 backdrop-blur-md shadow-md' 
+                          ${isActive
+                            ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 backdrop-blur-md shadow-md'
                             : 'text-gray-700 dark:text-gray-300 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-all duration-300'
                           }`}
                       >
@@ -318,8 +312,8 @@ function AppContent() {
                           key={item.path}
                           to={item.path}
                           className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium transition-colors rounded-lg
-                          ${isActive 
-                            ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 backdrop-blur-md shadow-md' 
+                          ${isActive
+                            ? 'text-primary-600 dark:text-primary-400 bg-primary-100 dark:bg-primary-900/30 backdrop-blur-md shadow-md'
                             : 'text-gray-700 dark:text-gray-300 hover:text-foreground hover:bg-gray-100 dark:hover:bg-gray-800/50 backdrop-blur-sm transition-all duration-300'
                           }`}
                         >

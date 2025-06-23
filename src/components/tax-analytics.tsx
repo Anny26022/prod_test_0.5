@@ -61,7 +61,7 @@ const EditableText: React.FC<{
 
   if (!isEditing) {
     return (
-      <motion.span 
+      <motion.span
         className={`inline-block ${className}`}
         initial={{ opacity: 0.8 }}
         animate={{ opacity: 1 }}
@@ -99,7 +99,6 @@ async function fetchTaxData(year: number) {
     const taxRecord = await SupabaseService.getTaxData(year);
     return taxRecord ? taxRecord.data : {};
   } catch (error) {
-    console.error('❌ Error fetching tax data from Supabase:', error);
     return {};
   }
 }
@@ -108,7 +107,6 @@ async function saveTaxData(year: number, taxData: any): Promise<boolean> {
   try {
     return await SupabaseService.saveTaxData(year, taxData);
   } catch (error) {
-    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
@@ -118,7 +116,6 @@ async function fetchCommentaryData(year: string) {
     const commentaryRecord = await SupabaseService.getCommentaryData(year);
     return commentaryRecord ? commentaryRecord.data : {};
   } catch (error) {
-    console.error('❌ Error fetching commentary data from Supabase:', error);
     return {};
   }
 }
@@ -127,7 +124,6 @@ async function saveCommentaryData(year: string, commentaryData: any): Promise<bo
   try {
     return await SupabaseService.saveCommentaryData(year, commentaryData);
   } catch (error) {
-    console.error('❌ Supabase commentary save error:', error);
     return false;
   }
 }
@@ -165,7 +161,7 @@ export const TaxAnalytics: React.FC = () => {
     setEditingCommentary(null);
   };
   const [taxesByMonth, setTaxesByMonth] = React.useState<{ [month: string]: number }>({});
-  
+
   // Function to load tax data for the selected year
   const loadTaxData = useCallback(async () => {
     try {
@@ -178,8 +174,7 @@ export const TaxAnalytics: React.FC = () => {
         setTaxesByMonth(initialData);
       }
     } catch (error) {
-      console.error('❌ Failed to load tax data:', error);
-    }
+      }
   }, [selectedYear]);
 
   // Function to load commentary data for the selected year
@@ -192,8 +187,7 @@ export const TaxAnalytics: React.FC = () => {
         setCustomCommentary({});
       }
     } catch (error) {
-      console.error('❌ Failed to load commentary data:', error);
-    }
+      }
   }, [selectedYear]);
 
   // Load tax and commentary data on mount and when selectedYear changes
@@ -204,13 +198,12 @@ export const TaxAnalytics: React.FC = () => {
     // Note: IndexedDB doesn't have storage events like localStorage
     // Data synchronization would need to be handled differently if needed
   }, [loadTaxData, loadCommentaryData]);
-  
+
   // Save tax data to IndexedDB when it changes
   React.useEffect(() => {
     if (Object.keys(taxesByMonth).length > 0 && selectedYear) {
       saveTaxData(selectedYear, taxesByMonth).then(success => {
-        console.log(`📊 [TaxAnalytics] Tax data save ${success ? 'successful' : 'failed'}`);
-      });
+        });
     }
   }, [taxesByMonth, selectedYear]);
 
@@ -218,23 +211,22 @@ export const TaxAnalytics: React.FC = () => {
   React.useEffect(() => {
     if (Object.keys(customCommentary).length > 0 && selectedYear) {
       saveCommentaryData(selectedYear, customCommentary).then(success => {
-        console.log(` [TaxAnalytics] Commentary data save ${success ? 'successful' : 'failed'}`);
-      });
+        });
     }
   }, [customCommentary, selectedYear]);
-  
+
   // Initialize months with 0 if they don't exist
   React.useEffect(() => {
     const initial: { [month: string]: number } = {};
     let needsUpdate = false;
-    
+
     monthOrder.forEach(month => {
       if (!(month in taxesByMonth)) {
         initial[month] = 0;
         needsUpdate = true;
       }
     });
-    
+
     if (needsUpdate) {
       setTaxesByMonth(prev => ({ ...initial, ...prev }));
     }
@@ -394,7 +386,7 @@ export const TaxAnalytics: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <motion.div 
+      <motion.div
         className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -444,9 +436,9 @@ export const TaxAnalytics: React.FC = () => {
         <Card className="lg:col-span-2">
           <CardHeader className="flex justify-between items-center">
             <h3 className="text-xl font-semibold tracking-tight">Tax Summary</h3>
-            <Tabs 
-              aria-label="Chart options" 
-              size="sm" 
+            <Tabs
+              aria-label="Chart options"
+              size="sm"
               color="primary"
               variant="light"
               radius="full"
@@ -634,7 +626,7 @@ export const TaxAnalytics: React.FC = () => {
         </CardHeader>
         <Divider />
         <CardBody>
-          <TaxTable 
+          <TaxTable
             trades={trades}
             taxesByMonth={taxesByMonth}
             setTaxesByMonth={setTaxesByMonth}

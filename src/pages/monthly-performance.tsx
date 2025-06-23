@@ -136,9 +136,9 @@ export const MonthlyPerformanceTable: React.FC = () => {
     // The key is that we're filtering trades correctly based on accounting method above
     const avgGain = winTrades.length > 0 ? winTrades.reduce((sum, t) => sum + (t.stockMove || 0), 0) / winTrades.length : 0;
     const avgLoss = lossTrades.length > 0 ? lossTrades.reduce((sum, t) => sum + (t.stockMove || 0), 0) / lossTrades.length : 0;
-    
+
     // Calculate average R:R (Reward to Risk ratio)
-    const avgRR = tradesCount > 0 
+    const avgRR = tradesCount > 0
       ? Math.abs(avgGain / avgLoss) // Use absolute values to get proper ratio
       : 0;
 
@@ -157,7 +157,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
     // Get capital changes for this month and year
     const monthCapitalChanges = capitalChanges.filter(change => {
       const changeDate = new Date(change.date);
-      return changeDate.getMonth() === monthOrder.indexOf(month) && 
+      return changeDate.getMonth() === monthOrder.indexOf(month) &&
              changeDate.getFullYear() === selectedYear;
     });
 
@@ -212,14 +212,14 @@ export const MonthlyPerformanceTable: React.FC = () => {
 
   const computedData = React.useMemo(() => {
     const currentYear = selectedYear; // Use the selected year instead of current year
-    
+
     return initialMonthlyData.map((row, i) => {
       const startingCapital = row.startingCapital;
       const pl = row.pl;
       const finalCapital = row.finalCapital;
       const monthIndex = monthOrder.indexOf(row.month);
       const currentDate = new Date(currentYear, monthIndex, 1);
-      
+
       // Get all capital changes up to this month
       const relevantChanges = capitalChanges
         .filter(change => new Date(change.date) <= currentDate)
@@ -301,7 +301,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
       };
     });
   }, safeDeps([initialMonthlyData, yearlyStartingCapital, capitalChanges, monthOrder]));
-  
+
   // Ensure we have valid data before rendering the table
   if (!computedData || computedData.length === 0) {
     return (
@@ -338,23 +338,23 @@ export const MonthlyPerformanceTable: React.FC = () => {
   const handleSaveAddedWithdrawn = (rowIndex: number, month: string, year: number) => {
     const value = Number(editingValue);
     if (isNaN(value)) return;
-    
+
     // Get the month index (0-11)
     const monthIndex = monthOrder.indexOf(month);
     if (monthIndex === -1) return;
-    
+
     // Always use selectedYear for the year
     year = selectedYear;
-    
+
     // Check if starting capital is set for this month (either manually or automatically)
     const monthData = computedData[rowIndex];
     const startingCapital = monthData.startingCapital;
-    
+
     // Allow adding/withdrawing funds regardless of starting capital value
-    
+
     const monthDate = new Date(year, monthIndex, 1);
     const formattedDate = monthDate.toISOString();
-    
+
     // Find any capital change for this month (assume only one per month for this UI)
     const existingChange = capitalChanges.find(change => {
       const d = new Date(change.date);
@@ -363,17 +363,17 @@ export const MonthlyPerformanceTable: React.FC = () => {
 
     // Get the current portfolio size for this month
     const currentPortfolioSize = getPortfolioSize(month, year, trades, useCashBasis);
-    
+
     if (existingChange) {
       // Calculate the difference to adjust the portfolio size
-      const oldAmount = existingChange.type === 'deposit' 
-        ? existingChange.amount 
+      const oldAmount = existingChange.type === 'deposit'
+        ? existingChange.amount
         : -existingChange.amount;
       const newAmount = value; // value can be positive or negative
       const difference = newAmount - oldAmount;
-      
+
       // Note: Portfolio size is now calculated automatically from true portfolio logic
-      
+
       // Update the capital change
       updateCapitalChange({
         ...existingChange,
@@ -385,7 +385,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
     } else if (value !== 0) {
       // Only add if value is not zero
       // Note: Portfolio size is now calculated automatically from true portfolio logic
-      
+
       // Add new capital change
       addCapitalChange({
         amount: Math.abs(value),
@@ -396,11 +396,11 @@ export const MonthlyPerformanceTable: React.FC = () => {
     } else if (value === 0 && existingChange) {
       // If setting to zero and there's an existing change, remove it
       // Note: Portfolio size is now calculated automatically from true portfolio logic
-      
+
       // Delete the existing change
       deleteCapitalChange(existingChange.id);
     }
-    
+
     setEditingCell(null);
     setEditingValue("");
   };
@@ -532,14 +532,14 @@ export const MonthlyPerformanceTable: React.FC = () => {
       label: (
         <div className="flex items-center gap-1">
           Final Capital
-          <Tooltip 
+          <Tooltip
             content={
               <div className="max-w-xs p-2">
                 <p className="font-semibold mb-1">Final Capital Calculation:</p>
                 <p className="text-sm">Starting Capital + P/L + (Added - Withdrawn)</p>
                 <p className="text-xs mt-2 text-foreground-500">Note: Please ensure Starting Capital is set before adding/withdrawing funds.</p>
               </div>
-            } 
+            }
             placement="top"
           >
             <Icon icon="lucide:info" className="text-base text-foreground-400 cursor-pointer" />
@@ -843,7 +843,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                   if (columnKey === 'addedWithdrawn') {
                     if (isEditing) {
                       return (
-                        <TableCell key={`${item.month}-${String(columnKey)}`}> 
+                        <TableCell key={`${item.month}-${String(columnKey)}`}>
                           <div className="flex items-center gap-2">
                             <Input
                               autoFocus
@@ -901,8 +901,8 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
-                  if (columnKey === 'pl' || columnKey === 'plPercentage' || 
+
+                  if (columnKey === 'pl' || columnKey === 'plPercentage' ||
                       (typeof columnKey === 'string' && (columnKey === 'cagr' || columnKey.startsWith('rollingReturn')))) {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -912,7 +912,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'winPercentage') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -931,7 +931,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'avgGain') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -943,7 +943,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'avgLoss') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -953,7 +953,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'avgRR') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -963,11 +963,11 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'startingCapital') {
                     const override = getMonthlyStartingCapitalOverride(item.month, selectedYear);
                     const hasCustomSize = override !== null;
-                    
+
                     if (isEditing) {
                       return (
                         <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -1010,7 +1010,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                         </TableCell>
                       );
                     }
-                    
+
                     let tooltipDerivation = '';
 
                     if (hasCustomSize) {
@@ -1066,7 +1066,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'finalCapital') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -1074,7 +1074,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'avgHoldingDays') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -1082,7 +1082,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   if (columnKey === 'trades') {
                     return (
                       <TableCell key={`${item.month}-${String(columnKey)}`}>
@@ -1090,7 +1090,7 @@ export const MonthlyPerformanceTable: React.FC = () => {
                       </TableCell>
                     );
                   }
-                  
+
                   return (
                     <TableCell key={`${item.month}-${String(columnKey)}`}>
                       <span className="text-foreground dark:text-foreground-200">{value}</span>

@@ -27,7 +27,6 @@ export const getFromIndexedDB = async <T>(
 
     return stored as T;
   } catch (error) {
-    console.error(`❌ Error reading from Supabase key "${key}":`, error);
     return fallback;
   }
 };
@@ -48,7 +47,6 @@ export const setToIndexedDB = async <T>(
     const valueToStore = serializer ? serializer(value) : value;
     return await SupabaseService.saveMiscData(key, valueToStore);
   } catch (error) {
-    console.error(`❌ Error saving to Supabase key "${key}":`, error);
     return false;
   }
 };

@@ -17,7 +17,7 @@ export const usePriceTicks = (symbol: string) => {
 
   const processTicks = useCallback((data: any): ProcessedTick[] => {
     if (!data?.data?.ticks?.[symbol]) return [];
-    
+
     return data.data.ticks[symbol].map((tick: any) => ({
       dateTime: tick[0],
       timestamp: new Date(tick[0]).getTime(),
@@ -33,33 +33,24 @@ export const usePriceTicks = (symbol: string) => {
   // Fetch data for the current market session with fallback mechanism
   const fetchTicks = useCallback(async (fromDate?: Date, toDate?: Date) => {
     if (!symbol || !isMounted.current) {
-      console.log('[usePriceTicks] No symbol provided or component unmounted');
       return [];
     }
 
-    console.log(`[usePriceTicks] Attempting to fetch ticks for symbol: ${symbol}`);
     setLoading(true);
     setError(null);
 
     try {
-      console.log(`[usePriceTicks] Calling primary fetchPriceTicks for ${symbol}`);
       let data;
 
       try {
         // Try primary API first
         data = await fetchPriceTicks(symbol, fromDate, toDate);
-        console.log('[usePriceTicks] Primary API success:', data);
-      } catch (primaryError) {
-        console.warn('[usePriceTicks] Primary API failed, trying fallback:', primaryError);
-
+        } catch (primaryError) {
         // If primary fails, try fallback mechanism
         data = await fetchPriceTicksWithFallback(symbol, fromDate, toDate);
-        console.log('[usePriceTicks] Fallback API success:', data);
-      }
+        }
 
       const processed = processTicks(data);
-      console.log('[usePriceTicks] Processed ticks:', processed);
-
       if (isMounted.current) {
         setPriceTicks(processed);
         setLastUpdated(new Date());
@@ -70,7 +61,6 @@ export const usePriceTicks = (symbol: string) => {
       return processed;
     } catch (err) {
       if (isMounted.current) {
-        console.error('[usePriceTicks] All API attempts failed:', err);
         const errorMessage = err instanceof Error ? err.message : 'Failed to fetch price ticks';
 
         // Provide more specific error messages for common issues
@@ -97,7 +87,6 @@ export const usePriceTicks = (symbol: string) => {
 
   // Stop polling
   const stopPolling = useCallback(() => {
-    console.log('[usePriceTicks] Stopping polling.');
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
       pollingIntervalRef.current = null;
@@ -150,8 +139,6 @@ export const usePriceTicks = (symbol: string) => {
       marketStatus = 'Closed';
     }
 
-    console.log(`[usePriceTicks] Starting polling for ${symbol} with interval: ${pollingInterval / 1000}s (Status: ${marketStatus})`);
-
     // Initial fetch - let the API determine the appropriate date range and interval
     fetchTicks();
 
@@ -184,7 +171,6 @@ export const usePriceTicks = (symbol: string) => {
       // Instead of restarting polling, just continue with current interval
       // The useEffect will handle interval changes when dependencies change
 
-      console.log(`[usePriceTicks] Polling for ${symbol}... (Status: ${currentMarketStatus})`);
       fetchTicks(); // Let API determine appropriate parameters
     }, pollingInterval);
 
@@ -200,7 +186,7 @@ export const usePriceTicks = (symbol: string) => {
     if (symbol) {
       startPolling();
     }
-    
+
     return () => {
       isMounted.current = false;
       stopPolling();
@@ -224,7 +210,7 @@ export const usePriceTicks = (symbol: string) => {
        // Assuming index 4 is the close price based on PriceTicksResponse interface
        if (latest && typeof latest[4] === 'number'){
           // Create a simplified object matching ProcessedTick structure
-          return { 
+          return {
             dateTime: latest[0] || '', // Date string
             timestamp: new Date(latest[0] || '').getTime(), // Timestamp
             open: latest[1] || 0,
@@ -247,9 +233,9 @@ export const usePriceTicks = (symbol: string) => {
   // Get price at a specific time
   const getPriceAtTime = useCallback((timestamp: Date): ProcessedTick | null => {
     if (priceTicks.length === 0) return null;
-    
+
     const targetTime = timestamp.getTime();
-    
+
     // Find the closest timestamp
     return priceTicks.reduce((prev, curr) => {
       const prevDiff = Math.abs(prev.timestamp - targetTime);

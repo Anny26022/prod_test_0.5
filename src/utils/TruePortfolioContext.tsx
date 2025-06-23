@@ -178,7 +178,7 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
     setYearlyStartingCapitals(prev => {
       const updated = [...prev];
       const existingIndex = updated.findIndex(item => item.year === year);
-      
+
       const newCapital = {
         year,
         startingCapital: amount,
@@ -190,7 +190,7 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
       } else {
         updated.push(newCapital);
       }
-      
+
       return updated.sort((a, b) => a.year - b.year);
     });
   }, []);
@@ -254,13 +254,13 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
       ...change,
       id: `capital_${new Date().getTime()}_${Math.random()}`
     };
-    
+
     setCapitalChanges(prev => [...prev, newChange]);
   }, []);
 
   const updateCapitalChange = useCallback((updatedChange: CapitalChange) => {
-    setCapitalChanges(prev => 
-      prev.map(change => 
+    setCapitalChanges(prev =>
+      prev.map(change =>
         change.id === updatedChange.id ? updatedChange : change
       )
     );
@@ -273,8 +273,6 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
   // Helper function to get trades P&L for a specific month/year
   const getTradesPLForMonth = useCallback((month: string, year: number, trades: any[] = [], useCashBasis: boolean = false): number => {
     if (!trades || trades.length === 0) return 0;
-
-
 
     if (useCashBasis) {
       // Cash basis: P&L is attributed to the month when trades are exited/closed
@@ -400,7 +398,7 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
     let startingCapital = 0;
 
     const currentMonthDate = new Date(year, monthIndex, 1);
-    
+
     // Base case: If current month is before the overall minimum date, return zero capital.
     // This prevents infinite recursion when going too far back in time.
     if (minOverallDate && currentMonthDate < minOverallDate) {
@@ -413,7 +411,7 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
         finalCapital: 0
       };
     }
-    
+
     // Check for monthly starting capital override first
     const override = getMonthlyStartingCapitalOverride(normalizedMonth, year);
     if (override !== null) {
@@ -595,7 +593,7 @@ export const TruePortfolioProvider = ({ children }: { children: ReactNode }) => 
     if (!maxOverallDate) {
       maxOverallDate = new Date();
     }
-    
+
     // Ensure maxOverallDate is at the end of its month to include all trades/changes within that month
     maxOverallDate.setMonth(maxOverallDate.getMonth() + 1);
     maxOverallDate.setDate(0); // This sets it to the last day of the previous month

@@ -141,8 +141,8 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
                     <CardBody className="px-6 py-5">
                         <div className="h-[320px] bg-background">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart 
-                                    data={symbolPnLData} 
+                                <BarChart
+                                    data={symbolPnLData}
                                     margin={{ top: 20, right: 30, left: 40, bottom: 60 }}
                                     barSize={chartConfig.barSize}
                                     barGap={chartConfig.barGap}
@@ -172,16 +172,16 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
                                         content={<CustomTooltip />}
                                         cursor={{ fill: 'hsl(var(--heroui-content2))', opacity: 0.1 }}
                                     />
-                                    <Bar 
-                                        dataKey="pnl" 
+                                    <Bar
+                                        dataKey="pnl"
                                         name="P&L"
                                         radius={[4, 4, 0, 0]}
                                         animationDuration={1000}
                                         animationBegin={0}
                                     >
                                         {symbolPnLData.map((entry, index) => (
-                                            <Cell 
-                                                key={`cell-${index}`} 
+                                            <Cell
+                                                key={`cell-${index}`}
                                                 fill={getBarColor(entry.pnl)}
                                                 fillOpacity={0.9}
                                             />
@@ -207,8 +207,8 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
                     <CardBody className="px-6 py-5">
                         <div className="h-[320px] bg-background">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart 
-                                    data={dayPnLData} 
+                                <BarChart
+                                    data={dayPnLData}
                                     margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
                                     barSize={chartConfig.barSize}
                                     barGap={chartConfig.barGap}
@@ -234,16 +234,16 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
                                         content={<CustomTooltip />}
                                         cursor={{ fill: 'hsl(var(--heroui-content2))', opacity: 0.1 }}
                                     />
-                                    <Bar 
-                                        dataKey="pnl" 
+                                    <Bar
+                                        dataKey="pnl"
                                         name="P&L"
                                         radius={[4, 4, 0, 0]}
                                         animationDuration={1000}
                                         animationBegin={0}
                                     >
                                         {dayPnLData.map((entry, index) => (
-                                            <Cell 
-                                                key={`cell-${index}`} 
+                                            <Cell
+                                                key={`cell-${index}`}
                                                 fill={getBarColor(entry.pnl)}
                                                 fillOpacity={0.9}
                                             />
@@ -259,4 +259,4 @@ const PnLDistributionCharts: React.FC<PnLDistributionChartsProps> = ({ trades })
     );
 };
 
-export default PnLDistributionCharts; 
+export default PnLDistributionCharts;

@@ -54,7 +54,6 @@ export const GlobalFilterBar: React.FC = () => {
         if (finalConfirm === 'DELETE') {
           try {
 
-
             // Clear all trades using the hook function (now async)
             await clearAllTrades();
 
@@ -98,8 +97,6 @@ export const GlobalFilterBar: React.FC = () => {
                 // Silent cleanup
               }
             }
-
-
 
             // Show success message and reload
             alert('✅ All data has been successfully cleared!\n\nThe page will now reload to reset the application.');
@@ -249,4 +246,4 @@ export const GlobalFilterBar: React.FC = () => {
       </Dropdown>
     </div>
   );
-}; 
+};

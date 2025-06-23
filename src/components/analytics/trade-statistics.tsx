@@ -22,9 +22,9 @@ const Stat: React.FC<StatProps> = ({ label, value, tooltip, isPercentage, index 
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(value.toString());
   const [isHovered, setIsHovered] = React.useState(false);
-  
+
   return (
-    <motion.div 
+    <motion.div
       className="relative overflow-hidden rounded-lg"
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -32,14 +32,14 @@ const Stat: React.FC<StatProps> = ({ label, value, tooltip, isPercentage, index 
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
     >
-      <motion.div 
+      <motion.div
         className="absolute inset-0 bg-gradient-to-r from-primary-500/5 via-transparent to-transparent"
         initial={{ x: "-100%" }}
         animate={{ x: isHovered ? "0%" : "-100%" }}
         transition={{ type: "spring", stiffness: 100, damping: 20 }}
       />
-      
-      <motion.div 
+
+      <motion.div
         className="relative flex justify-between items-center p-3 bg-content2 dark:bg-gray-900 border border-foreground-200/10 dark:border-gray-800"
         whileHover={{ x: 4 }}
         transition={{ type: "spring", stiffness: 400, damping: 10 }}
@@ -66,7 +66,7 @@ const Stat: React.FC<StatProps> = ({ label, value, tooltip, isPercentage, index 
             </MobileTooltip>
           )}
         </div>
-        
+
         <AnimatePresence mode="wait">
           {isEditing ? (
             <motion.div
@@ -86,13 +86,13 @@ const Stat: React.FC<StatProps> = ({ label, value, tooltip, isPercentage, index 
                   inputWrapper: "h-8 min-h-unit-8 bg-white dark:bg-gray-900",
                   input: "text-sm font-medium text-right dark:text-white"
                 }}
-                endContent={isPercentage && 
+                endContent={isPercentage &&
                   <span className="text-foreground-400 dark:text-gray-400 text-sm">%</span>
                 }
               />
             </motion.div>
           ) : (
-            <motion.div 
+            <motion.div
               className="font-semibold text-sm cursor-pointer text-foreground-800 dark:text-white"
               onClick={() => setIsEditing(true)}
               whileHover={{ scale: 1.05 }}

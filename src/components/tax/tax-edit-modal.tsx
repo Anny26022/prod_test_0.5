@@ -26,7 +26,6 @@ function fetchTaxData() {
     const stored = localStorage.getItem('taxData');
     return stored ? JSON.parse(stored) : {};
   } catch (error) {
-    console.error('Error fetching tax data:', error);
     return {};
   }
 }
@@ -35,8 +34,7 @@ function saveTaxData(taxData: any) {
   try {
     localStorage.setItem('taxData', JSON.stringify(taxData));
   } catch (error) {
-    console.error('localStorage save error:', error);
-  }
+    }
 }
 
 export const TaxEditModal: React.FC<TaxEditModalProps> = ({
@@ -45,7 +43,7 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
   month
 }) => {
   if (!month) return null;
-  
+
   // Unique key for sessionStorage
   const sessionKey = React.useMemo(() => month ? `taxEditModal_${month}` : 'taxEditModal', [month]);
 
@@ -173,7 +171,7 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
       ].forEach(suffix => sessionStorage.removeItem(sessionKey + suffix));
     }
   }, [isOpen, sessionKey]);
-  
+
   // Save tax data to Supabase when saving changes
   const handleSaveChanges = useCallback(() => {
     if (!month) return;
@@ -216,8 +214,8 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
   }, [taxBreakupSum]);
 
   return (
-    <Modal 
-      isOpen={isOpen} 
+    <Modal
+      isOpen={isOpen}
       onOpenChange={onOpenChange}
       size="3xl"
       scrollBehavior="inside"
@@ -228,8 +226,8 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
             <ModalHeader className="flex flex-col gap-1">
               <div className="flex items-center justify-between">
                 <h3>Edit {month} Tax Data</h3>
-                <Tabs 
-                  aria-label="Options" 
+                <Tabs
+                  aria-label="Options"
                   color="primary"
                   size="sm"
                   classNames={{
@@ -318,12 +316,12 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
                   defaultValue={month === "January" ? "-1.25%" : ""}
                 />
               </div>
-              
+
               <Divider className="my-4" />
-              
+
               <div className="space-y-4">
                 <h4 className="text-md font-medium">Tax Calculation Details</h4>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input
                     label="Short-term Capital Gain"
@@ -396,8 +394,8 @@ export const TaxEditModal: React.FC<TaxEditModalProps> = ({
               <Button variant="flat" onPress={onClose}>
                 Cancel
               </Button>
-              <Button 
-                color="primary" 
+              <Button
+                color="primary"
                 onPress={handleSaveChanges}
                 startContent={<Icon icon="lucide:save" />}
               >

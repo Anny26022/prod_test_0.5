@@ -33,7 +33,7 @@ function formatDate(dateString: string) {
   if (!dateString) return "-";
   try {
     const d = new Date(dateString);
-    return d.toLocaleDateString("en-IN", { 
+    return d.toLocaleDateString("en-IN", {
       day: "numeric",
       month: "numeric",
       year: "numeric"
@@ -43,23 +43,23 @@ function formatDate(dateString: string) {
   }
 }
 
-const TopPerformer: React.FC<TopPerformerProps> = ({ 
-  label, 
-  value, 
-  stock, 
-  date, 
+const TopPerformer: React.FC<TopPerformerProps> = ({
+  label,
+  value,
+  stock,
+  date,
   isPercentage,
   isPositive,
   isNegative,
   index = 0
 }) => {
   return (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
     >
-      <motion.div 
+      <motion.div
         className="relative flex flex-col gap-2 p-3 bg-content2 dark:bg-gray-900 border border-foreground-200/10 dark:border-gray-800 rounded-lg"
         variants={metricVariants}
         whileHover={{ x: 4 }}
@@ -71,10 +71,10 @@ const TopPerformer: React.FC<TopPerformerProps> = ({
               {label}
             </span>
           </div>
-          <motion.div 
+          <motion.div
             className={`font-semibold text-sm ${
-              isPositive ? 'text-success-600 dark:text-success-400' : 
-              isNegative ? 'text-danger-600 dark:text-danger-400' : 
+              isPositive ? 'text-success-600 dark:text-success-400' :
+              isNegative ? 'text-danger-600 dark:text-danger-400' :
               'text-foreground-800 dark:text-white'
             }`}
             layout
@@ -82,7 +82,7 @@ const TopPerformer: React.FC<TopPerformerProps> = ({
             {isPercentage ? `${value}%` : value}
           </motion.div>
         </div>
-        
+
         {(stock || date) && (
           <div className="flex items-center justify-between text-xs">
             {stock && (
@@ -162,8 +162,6 @@ export const TopPerformers: React.FC<TopPerformersProps> = ({ trades }) => {
         return true;
       });
     }
-
-
 
     const sortedTrades = [...uniqueTrades].sort((a, b) => {
       let aValue, bValue;
@@ -306,8 +304,8 @@ export const TopPerformers: React.FC<TopPerformersProps> = ({ trades }) => {
       <div className="flex justify-end">
         <Dropdown>
           <DropdownTrigger>
-            <Button 
-              variant="flat" 
+            <Button
+              variant="flat"
               size="sm"
               className="bg-content2 dark:bg-gray-900 text-foreground dark:text-white min-w-[120px] h-9"
               endContent={<Icon icon="lucide:chevron-down" className="text-sm dark:text-gray-400" />}
@@ -315,17 +313,17 @@ export const TopPerformers: React.FC<TopPerformersProps> = ({ trades }) => {
               {getMetricLabel()}
             </Button>
           </DropdownTrigger>
-          <DropdownMenu 
+          <DropdownMenu
             aria-label="Metric selection"
             className="dark:bg-gray-900"
             selectedKeys={[metricFilter]}
             selectionMode="single"
             onSelectionChange={(keys) => setMetricFilter(Array.from(keys)[0] as MetricFilter)}
           >
-            <DropdownItem key="stockMove" className="dark:text-white dark:hover:bg-gray-800">Move %</DropdownItem>
-            <DropdownItem key="pfImpact" className="dark:text-white dark:hover:bg-gray-800">Portfolio Impact</DropdownItem>
-            <DropdownItem key="rewardRisk" className="dark:text-white dark:hover:bg-gray-800">Risk:Reward</DropdownItem>
-            <DropdownItem key="plRs" className="dark:text-white dark:hover:bg-gray-800">P/L (₹)</DropdownItem>
+            <DropdownItem key="stockMove" textValue="Move %" className="dark:text-white dark:hover:bg-gray-800">Move %</DropdownItem>
+            <DropdownItem key="pfImpact" textValue="Portfolio Impact" className="dark:text-white dark:hover:bg-gray-800">Portfolio Impact</DropdownItem>
+            <DropdownItem key="rewardRisk" textValue="Risk:Reward" className="dark:text-white dark:hover:bg-gray-800">Risk:Reward</DropdownItem>
+            <DropdownItem key="plRs" textValue="P/L (₹)" className="dark:text-white dark:hover:bg-gray-800">P/L (₹)</DropdownItem>
           </DropdownMenu>
         </Dropdown>
       </div>

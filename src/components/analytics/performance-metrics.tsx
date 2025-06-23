@@ -25,12 +25,12 @@ interface MetricProps {
   index?: number;
 }
 
-const Metric: React.FC<MetricProps> = React.memo(({ 
-  label, 
-  value, 
-  change, 
-  tooltip, 
-  isPositive, 
+const Metric: React.FC<MetricProps> = React.memo(({
+  label,
+  value,
+  change,
+  tooltip,
+  isPositive,
   isNegative,
   isPercentage,
   isEditing,
@@ -53,7 +53,7 @@ const Metric: React.FC<MetricProps> = React.memo(({
   };
 
   return (
-    <motion.div 
+    <motion.div
       className="flex flex-col bg-content2/40 p-2 rounded-lg will-change-transform"
       variants={metricVariants}
       initial="initial"
@@ -62,7 +62,7 @@ const Metric: React.FC<MetricProps> = React.memo(({
       custom={index}
       transition={{ delay: index * 0.1 }}
     >
-      <motion.div 
+      <motion.div
         className="flex items-center gap-1 text-default-600 text-xs font-medium mb-0.5 will-change-transform"
         variants={listItemVariants}
       >
@@ -78,7 +78,7 @@ const Metric: React.FC<MetricProps> = React.memo(({
           </MobileTooltip>
         )}
       </motion.div>
-      <motion.div 
+      <motion.div
         className="flex items-end gap-2"
         variants={listItemVariants}
       >
@@ -107,7 +107,7 @@ const Metric: React.FC<MetricProps> = React.memo(({
               />
             </motion.div>
           ) : (
-            <motion.span 
+            <motion.span
               className="text-lg font-semibold tracking-tight"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -119,7 +119,7 @@ const Metric: React.FC<MetricProps> = React.memo(({
           )}
         </AnimatePresence>
         {change !== undefined && (
-          <motion.span 
+          <motion.span
             className={`text-sm ${isPositive ? 'text-success' : isNegative ? 'text-danger' : 'text-default-500'} flex items-center font-medium`}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -218,8 +218,6 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ trades, 
     return sum + remainingAllocation;
   }, 0);
 
-
-
   return (
     <div className="space-y-4">
 
@@ -235,14 +233,14 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ trades, 
           }
         }}
       >
-      <Metric 
-        label="Total Trades" 
+      <Metric
+        label="Total Trades"
         value={totalTrades}
         isEditing={isEditing}
         index={0}
       />
-      <Metric 
-        label="Win Rate" 
+      <Metric
+        label="Win Rate"
         value={winRate.toFixed(2)}
         isPositive
         isPercentage
@@ -250,61 +248,61 @@ export const PerformanceMetrics: React.FC<PerformanceMetricsProps> = ({ trades, 
         isEditing={isEditing}
         index={1}
       />
-      <Metric 
-        label="Avg + Move" 
+      <Metric
+        label="Avg + Move"
         value={avgPosMove.toFixed(2)}
         isPercentage
         tooltip="Average percentage gain on winning trades"
         isEditing={isEditing}
         index={2}
       />
-      <Metric 
-        label="Avg - Move" 
+      <Metric
+        label="Avg - Move"
         value={avgNegMove.toFixed(2)}
         isPercentage
         tooltip="Average percentage loss on losing trades"
         isEditing={isEditing}
         index={3}
       />
-      <Metric 
-        label="Avg Position Size" 
+      <Metric
+        label="Avg Position Size"
         value={avgPositionSize.toFixed(2)}
         isPercentage
         tooltip="Average position size as percentage of portfolio"
         isEditing={isEditing}
         index={4}
       />
-      <Metric 
-        label="Avg Holding Days" 
+      <Metric
+        label="Avg Holding Days"
         value={avgHoldingDays.toFixed(2)}
         tooltip="Average number of days positions are held"
         isEditing={isEditing}
         index={5}
       />
-      <Metric 
-        label="Plan Followed" 
+      <Metric
+        label="Plan Followed"
         value={planFollowed.toFixed(2)}
         isPercentage
         tooltip="Percentage of trades that followed the trading plan"
         isEditing={isEditing}
         index={6}
       />
-      <Metric 
-        label="Avg R" 
+      <Metric
+        label="Avg R"
         value={avgR.toFixed(2)}
         tooltip="Average reward-to-risk ratio across all trades"
         isEditing={isEditing}
         index={7}
       />
-      <Metric 
-        label="Open Positions" 
+      <Metric
+        label="Open Positions"
         value={openPositions}
         tooltip="Number of currently open positions"
         isEditing={isEditing}
         index={8}
       />
-      <Metric 
-        label="Cash" 
+      <Metric
+        label="Cash"
         value={cashPercentage.toFixed(2)}
         isPercentage
         tooltip="Percentage of portfolio in cash (approximate)"

@@ -29,7 +29,7 @@ import {
 } from '../utils/tradeCalculations';
 
 // Assuming Trade type is available from useTrades or a common types file
-// import { Trade } from '../types/trade'; 
+// import { Trade } from '../types/trade';
 
 // Placeholder type if not explicitly imported (ensure these match your actual Trade type structure)
 interface Trade {
@@ -47,7 +47,6 @@ interface Trade {
     openQty?: number;
     buySell?: 'Buy' | 'Sell';
 }
-
 
 const DeepAnalyticsPage: React.FC = () => { // Renamed component
     const { trades, isLoading } = useTrades();
@@ -528,7 +527,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
         // Assuming allocation is (positionSize / portfolioSize) * 100
         const tradesWithAllocation = openAndPartialTrades.map(trade => ({
             ...trade,
-            calculatedAllocation: trade.positionSize && portfolioSize > 0 
+            calculatedAllocation: trade.positionSize && portfolioSize > 0
                 ? (trade.positionSize / portfolioSize) * 100
                 : 0
         }));
@@ -564,7 +563,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                 return `${(cellValue as number).toFixed(2)}%`;
             case 'positionStatus':
                 return (
-                    <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium 
+                    <span className={`capitalize px-2 py-0.5 rounded-full text-xs font-medium
                         ${item.positionStatus === 'Open' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
                          item.positionStatus === 'Partial' ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' :
                          'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
@@ -680,8 +679,6 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
     const minTradeDate = tradeDates.length > 0 ? tradeDates.reduce((a, b) => a < b ? a : b) : '';
     const maxTradeDate = tradeDates.length > 0 ? tradeDates.reduce((a, b) => a > b ? a : b) : '';
 
-
-
     // Ensure proper date format handling
     let heatmapStartDate = '';
     let heatmapEndDate = '';
@@ -766,11 +763,11 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
           >
             <Card className="border border-gray-100 dark:border-gray-800 shadow-sm bg-background">
               <CardBody className="p-6">
-                <div 
+                <div
                   className="flex justify-between items-start will-change-transform"
                 >
                   <div className="space-y-2">
-                    <motion.p 
+                    <motion.p
                       className="text-foreground-500 text-sm font-medium"
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
@@ -778,17 +775,17 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                     >
                       {title}
                     </motion.p>
-                    <motion.div 
+                    <motion.div
                       className={`text-2xl font-semibold tracking-tight ${colors.text}`}
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: 0.4 }}
                     >
                       {value} {tooltipContent && (
-                        <Tooltip 
-                          content={tooltipContent} 
-                          placement="top" 
-                          radius="sm" 
+                        <Tooltip
+                          content={tooltipContent}
+                          placement="top"
+                          radius="sm"
                           shadow="md"
                           classNames={{ content: "bg-content1 border border-divider z-50 max-w-xs text-xs" }}
                         >
@@ -797,7 +794,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                       )}
                     </motion.div>
                   </div>
-                  <div 
+                  <div
                     className={`p-3 rounded-xl ${colors.bg} ${colors.icon}`}
                   >
                     <Icon icon={icon} className="text-xl" />
@@ -818,7 +815,7 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
     }
 
     return (
-        <motion.div 
+        <motion.div
             className="p-4 sm:p-6 space-y-6 bg-background"
             initial="hidden"
             animate="visible"
@@ -844,12 +841,12 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                     <CardBody>
             {!isLoading && (
                              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                 <StatsCard 
-                                    title="Avg. PnL/Day" 
+                 <StatsCard
+                                    title="Avg. PnL/Day"
                     value={
                         <div className="flex items-center gap-1">
                                             {formatCurrency(analytics.avgPnLPerDay)}
-                             <Tooltip 
+                             <Tooltip
                                                 content={
                                                     <div className="p-2">
                                                         <p className="font-semibold mb-1">Trading Days Approach</p>
@@ -857,19 +854,19 @@ const DeepAnalyticsPage: React.FC = () => { // Renamed component
                                                         <p className="text-xs mt-1">Total P&L ÷ Number of Trading Days</p>
                                                         <p className="text-xs mt-2 text-default-500">* Trading days: {analytics.uniqueTradingDays}</p>
                                                     </div>
-                                                } 
-                                placement="top" 
-                                radius="sm" 
+                                                }
+                                placement="top"
+                                radius="sm"
                                 shadow="md"
-                                                classNames={{ 
-                                                    content: "bg-content1 border border-divider z-50 max-w-xs" 
+                                                classNames={{
+                                                    content: "bg-content1 border border-divider z-50 max-w-xs"
                                                 }}
                             >
                                 <Icon icon="lucide:info" className="text-base text-foreground-400 cursor-help" />
                             </Tooltip>
                         </div>
                     }
-                                    icon="lucide:calendar-clock" 
+                                    icon="lucide:calendar-clock"
                                     color={analytics.avgPnLPerDay >= 0 ? "success" : "danger"}
                 />
                                  <StatsCard title="Expectancy (%)" value={<div className="flex items-center gap-1">{analytics.expectancy.toFixed(2)}%</div>} icon="lucide:trending-up" color={analytics.expectancy >= 0 ? "success" : "danger"} tooltipContent="Average amount you can expect to win or lose per trade. (Avg Win PF Impact * Win Rate) - (Avg Loss PF Impact * Loss Rate)"/>
@@ -973,7 +970,7 @@ Values: (${(analytics.annualizedAverageReturn * 100).toFixed(1)}% - ${(analytics
                                 </CardHeader>
                                 <Divider/>
                                 <CardBody className="p-0">
-                                    <Table 
+                                    <Table
                                         aria-label="Setup Performance Table"
                                         classNames={{
                                             th: "bg-transparent border-b border-divider text-xs font-medium text-default-500 uppercase tracking-wider text-right",
@@ -987,7 +984,7 @@ Values: (${(analytics.annualizedAverageReturn * 100).toFixed(1)}% - ${(analytics
                                             <TableColumn>Win Rate</TableColumn>
                                             <TableColumn>Total PF Impact</TableColumn>
                                         </TableHeader>
-                                        <TableBody 
+                                        <TableBody
                                             items={setupPerformance}
                                             emptyContent={"No setup data to display."}
                                         >
@@ -1067,10 +1064,10 @@ Values: (${(analytics.annualizedAverageReturn * 100).toFixed(1)}% - ${(analytics
             </Accordion>
 
             {/* Trading Activity Heatmap Card */}
-            <motion.div 
-                variants={{ 
-                    hidden: { opacity: 0, y: 20 }, 
-                    visible: { opacity: 1, y: 0 } 
+            <motion.div
+                variants={{
+                    hidden: { opacity: 0, y: 20 },
+                    visible: { opacity: 1, y: 0 }
                 }}
                 className="w-full"
             >
@@ -1132,4 +1129,4 @@ Values: (${(analytics.annualizedAverageReturn * 100).toFixed(1)}% - ${(analytics
     );
 };
 
-export default DeepAnalyticsPage; 
+export default DeepAnalyticsPage;

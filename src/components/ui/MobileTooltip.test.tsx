@@ -21,13 +21,13 @@ describe('MobileTooltip', () => {
       configurable: true,
       value: 1024,
     });
-    
+
     Object.defineProperty(window, 'ontouchstart', {
       writable: true,
       configurable: true,
       value: undefined,
     });
-    
+
     Object.defineProperty(navigator, 'maxTouchPoints', {
       writable: true,
       configurable: true,
@@ -91,11 +91,11 @@ describe('MobileTooltip', () => {
     );
 
     const button = screen.getByRole('button');
-    
+
     // First click - should open
     fireEvent.click(button);
     expect(screen.getByTestId('tooltip-content')).toBeInTheDocument();
-    
+
     // Second click - should close
     fireEvent.click(button);
     expect(screen.queryByTestId('tooltip-content')).not.toBeInTheDocument();

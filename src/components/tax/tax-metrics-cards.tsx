@@ -1,4 +1,4 @@
-per lseek import React from "react";
+import React from "react";
 import { Card, CardBody } from "@heroui/react";
 import { Icon } from "@iconify/react";
 import { motion } from "framer-motion";
@@ -150,21 +150,21 @@ interface MetricCardProps {
   isEditMode: boolean;
 }
 
-const MetricCard: React.FC<MetricCardProps> = ({ 
-  title, 
-  value, 
-  icon, 
-  color, 
-  change, 
+const MetricCard: React.FC<MetricCardProps> = ({
+  title,
+  value,
+  icon,
+  color,
+  change,
   isPositive,
   isEditMode
 }) => {
   const [editValue, setEditValue] = React.useState(value);
-  
+
   React.useEffect(() => {
     setEditValue(value);
   }, [value]);
-  
+
   return (
     <motion.div
       whileHover={{ y: -4 }}

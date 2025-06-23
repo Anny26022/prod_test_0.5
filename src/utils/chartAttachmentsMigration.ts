@@ -23,10 +23,8 @@ export async function checkMigrationNeeded(): Promise<boolean> {
   try {
     // Check if chartImageBlobs table exists and is accessible
     const testBlobs = await DatabaseService.getAllChartImageBlobs();
-    console.log('📊 Chart attachments feature is available');
     return false; // Migration not needed
   } catch (error) {
-    console.log('🔄 Chart attachments migration may be needed');
     return true;
   }
 }
@@ -35,7 +33,7 @@ export async function checkMigrationNeeded(): Promise<boolean> {
  * Migrate existing trade data to support chart attachments
  */
 export async function migrateToChartAttachments(): Promise<MigrationResult> {
-  
+
   const result: MigrationResult = {
     success: false,
     message: '',
@@ -81,8 +79,7 @@ export async function migrateToChartAttachments(): Promise<MigrationResult> {
       } catch (error) {
         const errorMsg = `Error processing trade ${trade.id}: ${error instanceof Error ? error.message : 'Unknown error'}`;
         errors.push(errorMsg);
-        console.error('❌', errorMsg);
-      }
+        }
     }
 
     // 4. Verify chartImageBlobs table is working
@@ -94,7 +91,6 @@ export async function migrateToChartAttachments(): Promise<MigrationResult> {
 
     // 5. TEMPORARILY DISABLE cleanup to debug deletion issue
     // TODO: Re-enable after fixing the deletion problem
-    console.log('🧹 [MIGRATION] Cleanup temporarily disabled for debugging');
     // try {
     //   await ChartImageService.cleanupOrphanedBlobs();
     // } catch (error) {
@@ -103,19 +99,17 @@ export async function migrateToChartAttachments(): Promise<MigrationResult> {
 
     // 6. Determine migration success
     const success = errors.length === 0 && processedCount === trades.length;
-    
+
     result.success = success;
-    result.message = success 
+    result.message = success
       ? `✅ Migration completed successfully! Processed ${processedCount} trades.`
       : `⚠️ Migration completed with issues. Processed ${processedCount}/${trades.length} trades.`;
-    
+
     result.details = {
       tradesProcessed: processedCount,
       blobsCreated: 0, // No blobs created during migration, only schema update
       errors
     };
-
-
 
     return result;
 
@@ -145,7 +139,6 @@ export async function validateChartAttachments(): Promise<{
   };
 }> {
 
-  
   const issues: string[] = [];
   const statistics = {
     totalTrades: 0,
@@ -159,23 +152,23 @@ export async function validateChartAttachments(): Promise<{
     // Get all trades and blobs
     const trades = await DatabaseService.getAllTrades();
     const allBlobs = await DatabaseService.getAllChartImageBlobs();
-    
+
     statistics.totalTrades = trades.length;
-    
+
     // Create sets for validation
     const tradeIds = new Set(trades.map(t => t.id));
     const blobTradeIds = new Set(allBlobs.map(b => b.tradeId));
-    
+
     // Validate trades with chart attachments
     for (const trade of trades) {
       if (trade.chartAttachments) {
         statistics.tradesWithAttachments++;
-        
+
         // Check before entry image
         if (trade.chartAttachments.beforeEntry) {
           statistics.totalImages++;
           statistics.totalSize += trade.chartAttachments.beforeEntry.size;
-          
+
           // Validate blob reference if using blob storage
           if (trade.chartAttachments.beforeEntry.storage === 'blob' && trade.chartAttachments.beforeEntry.blobId) {
             const blob = await DatabaseService.getChartImageBlob(trade.chartAttachments.beforeEntry.blobId);
@@ -184,12 +177,12 @@ export async function validateChartAttachments(): Promise<{
             }
           }
         }
-        
+
         // Check after exit image
         if (trade.chartAttachments.afterExit) {
           statistics.totalImages++;
           statistics.totalSize += trade.chartAttachments.afterExit.size;
-          
+
           // Validate blob reference if using blob storage
           if (trade.chartAttachments.afterExit.storage === 'blob' && trade.chartAttachments.afterExit.blobId) {
             const blob = await DatabaseService.getChartImageBlob(trade.chartAttachments.afterExit.blobId);
@@ -200,7 +193,7 @@ export async function validateChartAttachments(): Promise<{
         }
       }
     }
-    
+
     // Check for orphaned blobs
     for (const blob of allBlobs) {
       if (!tradeIds.has(blob.tradeId)) {
@@ -208,19 +201,17 @@ export async function validateChartAttachments(): Promise<{
         issues.push(`Orphaned blob ${blob.id} for non-existent trade ${blob.tradeId}`);
       }
     }
-    
 
-    
     return {
       isValid: issues.length === 0,
       issues,
       statistics
     };
-    
+
   } catch (error) {
     const errorMsg = `Validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`;
     issues.push(errorMsg);
-    
+
     return {
       isValid: false,
       issues,
@@ -255,7 +246,7 @@ export async function getStorageStatistics(): Promise<{
   try {
     const trades = await DatabaseService.getAllTrades();
     const allBlobs = await DatabaseService.getAllChartImageBlobs();
-    
+
     let tradesWithAttachments = 0;
     let beforeEntryCount = 0;
     let afterExitCount = 0;
@@ -263,17 +254,17 @@ export async function getStorageStatistics(): Promise<{
     let blobCount = 0;
     let inlineSize = 0;
     let totalImageSize = 0;
-    
+
     // Analyze trades
     for (const trade of trades) {
       if (trade.chartAttachments) {
         let hasAttachments = false;
-        
+
         if (trade.chartAttachments.beforeEntry) {
           beforeEntryCount++;
           hasAttachments = true;
           totalImageSize += trade.chartAttachments.beforeEntry.size;
-          
+
           if (trade.chartAttachments.beforeEntry.storage === 'inline') {
             inlineCount++;
             inlineSize += trade.chartAttachments.beforeEntry.size;
@@ -281,12 +272,12 @@ export async function getStorageStatistics(): Promise<{
             blobCount++;
           }
         }
-        
+
         if (trade.chartAttachments.afterExit) {
           afterExitCount++;
           hasAttachments = true;
           totalImageSize += trade.chartAttachments.afterExit.size;
-          
+
           if (trade.chartAttachments.afterExit.storage === 'inline') {
             inlineCount++;
             inlineSize += trade.chartAttachments.afterExit.size;
@@ -294,17 +285,17 @@ export async function getStorageStatistics(): Promise<{
             blobCount++;
           }
         }
-        
+
         if (hasAttachments) {
           tradesWithAttachments++;
         }
       }
     }
-    
+
     // Calculate blob storage size
     const blobSize = allBlobs.reduce((total, blob) => total + blob.size, 0);
     const totalImages = beforeEntryCount + afterExitCount;
-    
+
     return {
       trades: {
         total: trades.length,
@@ -325,7 +316,7 @@ export async function getStorageStatistics(): Promise<{
         averageImageSize: totalImages > 0 ? totalImageSize / totalImages : 0
       }
     };
-    
+
   } catch (error) {
     throw error;
   }

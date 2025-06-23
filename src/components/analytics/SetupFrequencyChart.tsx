@@ -19,7 +19,7 @@ interface SetupFrequencyChartProps {
 }
 
 const chartColors = [
-  '#4A8DFF', '#34D399', '#FF6B6B', '#FFC107', '#A78BFA', 
+  '#4A8DFF', '#34D399', '#FF6B6B', '#FFC107', '#A78BFA',
   '#56B4E9', '#009E73', '#F0E442', '#E69F00', '#D55E00'
 ];
 
@@ -80,7 +80,7 @@ const SetupFrequencyChart: React.FC<SetupFrequencyChartProps> = ({ trades }) => 
       <Divider/>
       <CardBody className="p-4 sm:p-6">
         {chartData.length > 0 ? (
-             <motion.div 
+             <motion.div
                 style={{ height: '350px' }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}

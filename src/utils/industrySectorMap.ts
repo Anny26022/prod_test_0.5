@@ -39,4 +39,4 @@ export function getIndustrySectorByName(name: string): IndustrySectorInfo | unde
 
 export function getAllIndustrySectorMappings(): IndustrySectorInfo[] {
   return Object.values(mapping);
-} 
+}

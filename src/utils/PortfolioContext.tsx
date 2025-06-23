@@ -26,7 +26,6 @@ function fetchPortfolioSizes(): MonthlyPortfolioSize[] {
     const stored = localStorage.getItem('portfolioSizes');
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.error('Error fetching portfolio sizes:', error);
     return [];
   }
 }
@@ -35,8 +34,7 @@ function savePortfolioSizes(sizes: MonthlyPortfolioSize[]) {
   try {
     localStorage.setItem('portfolioSizes', JSON.stringify(sizes));
   } catch (error) {
-    console.error('localStorage save error:', error);
-  }
+    }
 }
 
 export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
@@ -62,7 +60,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
   // For backward compatibility
   const portfolioSize = useCallback(() => {
     if (monthlyPortfolioSizes.length === 0) return DEFAULT_PORTFOLIO_SIZE;
-    const sorted = [...monthlyPortfolioSizes].sort((a, b) => 
+    const sorted = [...monthlyPortfolioSizes].sort((a, b) =>
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
     return sorted[0].size;
@@ -75,7 +73,7 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
       const existingIndex = updatedSizes.findIndex(
         item => item.month === month && item.year === year
       );
-      
+
       const newSize = {
         month,
         year,
@@ -90,14 +88,14 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
         // Add new
         updatedSizes.push(newSize);
       }
-      
+
       // Sort by year and month to ensure consistent ordering
       updatedSizes.sort((a, b) => {
         if (a.year !== b.year) return a.year - b.year;
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         return months.indexOf(a.month) - months.indexOf(b.month);
       });
-      
+
       return updatedSizes;
     });
   }, []);
@@ -106,19 +104,19 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
     const size = monthlyPortfolioSizes.find(
       item => item.month === month && item.year === year
     );
-    
+
     if (size) return size.size;
-    
+
     // If no specific size for this month, find the most recent one *within the same year* or fallback to default
     const monthIndex = [
       'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ].indexOf(month);
-    
+
     if (monthIndex === -1) return DEFAULT_PORTFOLIO_SIZE; // Should not happen with valid month names
-    
+
     const currentDate = new Date(year, monthIndex, 1);
-    
+
     const previousSizesInSameYear = monthlyPortfolioSizes
       .filter(item => {
         const itemMonthIndex = [
@@ -130,14 +128,14 @@ export const PortfolioProvider = ({ children }: { children: ReactNode }) => {
         return itemDate < currentDate && item.year === year;
       })
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    
+
     // If a previous size exists in the same year, use it, otherwise use the default
     return previousSizesInSameYear[0]?.size || DEFAULT_PORTFOLIO_SIZE;
   }, [monthlyPortfolioSizes]);
 
   const getLatestPortfolioSize = useCallback((): number => {
     if (monthlyPortfolioSizes.length === 0) return DEFAULT_PORTFOLIO_SIZE;
-    const sorted = [...monthlyPortfolioSizes].sort((a, b) => 
+    const sorted = [...monthlyPortfolioSizes].sort((a, b) =>
       new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
     );
     return sorted[0].size;

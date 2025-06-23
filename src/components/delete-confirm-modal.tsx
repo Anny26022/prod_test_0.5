@@ -25,9 +25,9 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   tradeName
 }) => {
   return (
-    <Modal 
-      isOpen={isOpen} 
-      onOpenChange={onOpenChange} 
+    <Modal
+      isOpen={isOpen}
+      onOpenChange={onOpenChange}
       size="sm"
       backdrop="blur"
       className="bg-background/95 backdrop-blur-sm"
@@ -66,14 +66,14 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             <Divider className="opacity-50" />
             <ModalBody>
               <div className="flex flex-col items-center gap-4 py-6">
-                <motion.div 
+                <motion.div
                   className="w-16 h-16 rounded-full bg-danger-100 dark:bg-danger-900/30 flex items-center justify-center shadow-soft-sm"
                   initial={{ scale: 0.8, rotate: -10 }}
                   animate={{ scale: 1, rotate: 0 }}
-                  transition={{ 
-                    type: "spring", 
-                    stiffness: 400, 
-                    damping: 15 
+                  transition={{
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 15
                   }}
                 >
                   <Icon icon="lucide:trash" className="text-danger-500 text-2xl" />
@@ -91,8 +91,8 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
             </ModalBody>
             <Divider className="opacity-50" />
             <ModalFooter className="pt-4">
-              <Button 
-                variant="flat" 
+              <Button
+                variant="flat"
                 onPress={onClose}
                 className="hover:bg-foreground-100 transition-colors duration-200"
               >
@@ -102,14 +102,14 @@ export const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Button 
-                  color="danger" 
+                <Button
+                  color="danger"
                   onPress={onDelete}
                   className="bg-gradient-to-r from-danger-500 to-danger-600 shadow-soft-sm hover:shadow-soft-md transition-all duration-200"
                   startContent={
-                    <Icon 
-                      icon="lucide:trash" 
-                      className="text-lg opacity-90" 
+                    <Icon
+                      icon="lucide:trash"
+                      className="text-lg opacity-90"
                     />
                   }
                 >

@@ -34,13 +34,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        console.log('🔄 Initializing auth state...')
-
         // First, try to get the current session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
         if (sessionError) {
-          console.error('Session error:', sessionError)
           setAuthState({
             user: null,
             session: null,
@@ -52,7 +49,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (session) {
-          console.log('✅ Found existing session, restoring user...')
           // We have a valid session, user is already in the session
           setAuthState({
             user: session.user,
@@ -60,9 +56,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             loading: false,
             error: null
           })
-          console.log('✅ Session restored successfully')
-        } else {
-          console.log('ℹ️ No existing session found')
+          } else {
           // No session found
           setAuthState({
             user: null,
@@ -74,7 +68,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         setInitializing(false)
       } catch (error) {
-        console.error('Failed to initialize auth:', error)
         setAuthState({
           user: null,
           session: null,
@@ -89,7 +82,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     // Set a fallback timeout to ensure loading doesn't hang forever
     const fallbackTimer = setTimeout(() => {
-      console.log('⏰ Auth initialization timeout reached')
       setAuthState(prev => ({
         ...prev,
         loading: false
@@ -103,17 +95,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Listen for auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email)
-
       // Don't process events during initial setup
       if (initializing) {
-        console.log('⏸️ Skipping auth event during initialization:', event)
         return
       }
 
       try {
         if (event === 'SIGNED_OUT') {
-          console.log('👋 User signed out')
           setAuthState({
             user: null,
             session: null,
@@ -124,7 +112,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (event === 'SIGNED_IN') {
-          console.log('👤 User signed in')
           if (session) {
             setAuthState({
               user: session.user,
@@ -137,7 +124,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (event === 'TOKEN_REFRESHED') {
-          console.log('🔄 Token refreshed')
           if (session) {
             setAuthState(prev => ({
               ...prev,
@@ -151,20 +137,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
 
         if (event === 'INITIAL_SESSION') {
-          console.log('🚀 Initial session event')
           // This should be handled by the initialization above
           return
         }
 
         // For other events, just update loading state
-        console.log('ℹ️ Other auth event:', event)
         setAuthState(prev => ({
           ...prev,
           loading: false
         }))
 
       } catch (error) {
-        console.error('Failed to update auth state:', error)
         setAuthState(prev => ({
           ...prev,
           loading: false,
@@ -178,10 +161,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signIn = async (email: string, password: string) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }))
-    
+
     try {
       const { data, error } = await AuthService.signIn({ email, password })
-      
+
       if (error) {
         setAuthState(prev => ({ ...prev, loading: false, error: error.message }))
         return { error: error.message }
@@ -198,10 +181,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }))
-    
+
     try {
       const { data, error } = await AuthService.signUp({ email, password, firstName, lastName })
-      
+
       if (error) {
         setAuthState(prev => ({ ...prev, loading: false, error: error.message }))
         return { error: error.message }
@@ -239,12 +222,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const signOut = async () => {
     setAuthState(prev => ({ ...prev, loading: true, error: null }))
-    
+
     try {
       await AuthService.signOut()
       // Auth state will be updated by the onAuthStateChange listener
     } catch (error) {
-      console.error('Sign out error:', error)
       setAuthState(prev => ({ ...prev, loading: false, error: 'Failed to sign out' }))
     }
   }
@@ -280,7 +262,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updatePassword = async (newPassword: string) => {
     try {
       const { data, error } = await AuthService.updatePassword(newPassword)
-      
+
       if (error) {
         return { error: error.message }
       }
@@ -294,7 +276,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const updateProfile = async (updates: { email?: string; firstName?: string; lastName?: string }) => {
     try {
       const { data, error } = await AuthService.updateProfile(updates)
-      
+
       if (error) {
         return { error: error.message }
       }
@@ -315,8 +297,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const state = await getAuthState()
       setAuthState(state)
     } catch (error) {
-      console.error('Failed to refresh session:', error)
-    }
+      }
   }
 
   const contextValue: AuthContextType = {

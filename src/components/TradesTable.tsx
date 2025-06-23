@@ -9,21 +9,21 @@ import { calcIndividualMoves } from "../utils/tradeCalculations";
 export const TradesTable = () => {
   const { trades, updateTrade } = useTrades();
   const [validationMessages, setValidationMessages] = React.useState<Record<string, TradeIssue[]>>({});
-  
+
   const handleCellChange = (trade: Trade, field: keyof Trade, value: any) => {
     const updatedTrade = { ...trade, [field]: value };
     const issues = validateTrade(updatedTrade);
-    
+
     setValidationMessages(prev => ({
       ...prev,
       [trade.id]: issues
     }));
-    
+
     if (issues.some(issue => issue.type === 'error')) {
-      console.error(`Trade ${trade.tradeNo}: ${issues.find(i => i.type === 'error')?.message}`);
+      console.error(`Trade validation failed: ${issues.find(issue => issue.type === 'error')?.message}`);
       return;
     }
-    
+
     updateTrade(updatedTrade);
   };
 
@@ -77,8 +77,8 @@ export const TradesTable = () => {
       return (
         <div className="flex items-center gap-1">
           <span>{formatPercentage(trade.stockMove)}</span>
-          <Tooltip 
-            content={tooltipContent} 
+          <Tooltip
+            content={tooltipContent}
             placement="right"
             classNames={{
               base: "py-1 px-2 shadow-soft-xl backdrop-blur-xl bg-background/80 dark:bg-background/40 border border-foreground-200/20",
@@ -100,7 +100,7 @@ export const TradesTable = () => {
           <div className="font-medium mt-1">Reward Basis (per share):</div>
           {trade.positionStatus === 'Open' && <p className="ml-2 text-[11px]">Potential: Current Market Price (CMP) - Entry Price</p>}
           {trade.positionStatus === 'Closed' && <p className="ml-2 text-[11px]">Actual: Average Exit Price - Entry Price</p>}
-          {trade.positionStatus === 'Partial' && 
+          {trade.positionStatus === 'Partial' &&
             <ul className="list-disc list-inside ml-2 text-[11px]">
               <li>Exited Qty: Avg. Exit - Entry</li>
               <li>Open Qty: CMP - Entry</li>
@@ -113,8 +113,8 @@ export const TradesTable = () => {
       return (
         <div className="flex items-center gap-1">
           <span>{formatRR(trade.rewardRisk)}</span>
-           <Tooltip 
-            content={rrTooltipContent} 
+           <Tooltip
+            content={rrTooltipContent}
             placement="right"
             classNames={{
               base: "py-1 px-2 shadow-soft-xl backdrop-blur-xl bg-background/80 dark:bg-background/40 border border-foreground-200/20",
@@ -141,7 +141,7 @@ export const TradesTable = () => {
         {(hasError || hasWarning) && (
           <div className="absolute top-0 right-0">
             <div className="group relative">
-              <Icon 
+              <Icon
                 icon={hasError ? "lucide:alert-circle" : "lucide:alert-triangle"}
                 className={`${hasError ? 'text-danger-500' : 'text-warning-500'} w-4 h-4`}
               />
@@ -171,27 +171,27 @@ export const TradesTable = () => {
           {Object.entries(validationMessages).map(([tradeId, issues]) => {
             const trade = trades.find(t => t.id === tradeId);
             if (!trade || !issues.length) return null;
-            
+
             return (
               <div key={tradeId} className="mb-3 last:mb-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <Icon 
-                    icon="lucide:file-text" 
+                  <Icon
+                    icon="lucide:file-text"
                     className="text-warning-500"
                   />
                   <strong className="text-warning-700">Trade #{trade.tradeNo} ({trade.name})</strong>
                 </div>
                 <ul className="list-none pl-6">
                   {issues.map((issue, idx) => (
-                    <li 
+                    <li
                       key={idx}
                       className={`flex items-center gap-2 text-sm mb-1 last:mb-0 ${
-                        issue.type === 'error' 
-                          ? 'text-danger-600' 
+                        issue.type === 'error'
+                          ? 'text-danger-600'
                           : 'text-warning-600'
                       }`}
                     >
-                      <Icon 
+                      <Icon
                         icon={issue.type === 'error' ? "lucide:alert-circle" : "lucide:alert-triangle"}
                         className={`${
                           issue.type === 'error' ? 'text-danger-500' : 'text-warning-500'
@@ -213,4 +213,4 @@ export const TradesTable = () => {
       </Table>
     </div>
   );
-}; 
+};

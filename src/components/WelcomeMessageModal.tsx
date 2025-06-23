@@ -134,4 +134,4 @@ export const WelcomeMessageModal: React.FC<WelcomeMessageModalProps> = ({ isOpen
       </ModalContent>
     </Modal>
   );
-}; 
+};

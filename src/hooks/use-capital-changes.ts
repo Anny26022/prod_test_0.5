@@ -14,7 +14,6 @@ const loadCapitalChanges = async (): Promise<CapitalChange[]> => {
     const saved = await SupabaseService.getMiscData('capital_changes');
     return saved ? saved : [];
   } catch (error) {
-    console.error('❌ Error loading capital changes from Supabase:', error);
     return [];
   }
 };
@@ -25,7 +24,6 @@ const loadMonthlyCapitalHistory = async (): Promise<MonthlyCapitalHistory[]> => 
     const saved = await SupabaseService.getMiscData('monthly_capital_history');
     return saved ? saved : [];
   } catch (error) {
-    console.error('❌ Error loading monthly capital history from Supabase:', error);
     return [];
   }
 };
@@ -34,7 +32,6 @@ const saveMonthlyCapitalHistory = async (history: MonthlyCapitalHistory[]): Prom
   try {
     return await SupabaseService.saveMiscData('monthly_capital_history', history);
   } catch (error) {
-    console.error('❌ Error saving monthly capital history to Supabase:', error);
     return false;
   }
 };
@@ -46,7 +43,6 @@ async function loadCapitalChangesLegacy(): Promise<CapitalChange[]> {
     const stored = await SupabaseService.getMiscData('capitalChanges');
     return stored ? stored : [];
   } catch (error) {
-    console.error('❌ Error loading capital changes from Supabase:', error);
     return [];
   }
 }
@@ -55,7 +51,6 @@ async function saveCapitalChanges(changes: CapitalChange[]): Promise<boolean> {
   try {
     return await SupabaseService.saveMiscData('capitalChanges', changes);
   } catch (error) {
-    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
@@ -65,7 +60,6 @@ async function fetchMonthlyCapitalHistory(): Promise<any[]> {
     const stored = await SupabaseService.getMiscData('monthlyCapitalHistory');
     return stored ? stored : [];
   } catch (error) {
-    console.error('❌ Error fetching monthly capital history from Supabase:', error);
     return [];
   }
 }
@@ -74,7 +68,6 @@ async function saveMonthlyCapitalHistoryLegacy(history: any[]): Promise<boolean>
   try {
     return await SupabaseService.saveMiscData('monthlyCapitalHistory', history);
   } catch (error) {
-    console.error('❌ Supabase save error:', error);
     return false;
   }
 }
@@ -88,7 +81,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
     updateCapitalChange,
     deleteCapitalChange
   } = useTruePortfolio();
-  
+
   const months = [
     'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
@@ -109,8 +102,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
         const loadedHistory = await fetchMonthlyCapitalHistory();
         setMonthlyCapitalHistory(loadedHistory);
       } catch (error) {
-        console.error('❌ Failed to load capital data:', error);
-      } finally {
+        } finally {
         setLoading(false);
       }
     };
@@ -122,8 +114,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
   React.useEffect(() => {
     if (!loading) {
       saveCapitalChanges(localCapitalChanges).then(success => {
-        console.log(`📊 [useCapitalChanges] Capital changes save ${success ? 'successful' : 'failed'}`);
-      });
+        });
     }
   }, [localCapitalChanges, loading]);
 
@@ -131,15 +122,14 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
   React.useEffect(() => {
     if (!loading) {
       saveMonthlyCapitalHistoryLegacy(monthlyCapitalHistory).then(success => {
-        console.log(`📊 [useCapitalChanges] Monthly history save ${success ? 'successful' : 'failed'}`);
-      });
+        });
     }
   }, [monthlyCapitalHistory, loading]);
 
     // Calculate monthly capital data using TruePortfolio system
   React.useEffect(() => {
     if (!getTruePortfolioSize) return;
-    
+
     // Group trades and capital changes by month and year
     const monthlyData: Record<string, { trades: any[]; changes: CapitalChange[]; date: Date; monthName: string; year: number }> = {};
 
@@ -199,7 +189,7 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
     let currentCapital = initialPortfolioSize; // Start with initial capital
 
     const cursorDate = new Date(earliestDate.getFullYear(), earliestDate.getMonth(), 1);
-    
+
     // Add an initial data point for the starting capital of the very first month
     const firstMonthName = earliestDate.toLocaleString('default', { month: 'short' });
     const firstYear = earliestDate.getFullYear();
@@ -325,4 +315,4 @@ export const useCapitalChanges = (trades: any[], initialPortfolioSize: number, u
     monthlyCapitalHistory,
     setMonthlyStartingCapital: setMonthlyStartingCapitalLocal
   };
-}; 
+};

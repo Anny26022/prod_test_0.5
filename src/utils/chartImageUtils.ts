@@ -7,14 +7,33 @@ import { v4 as uuidv4 } from 'uuid';
 export const CHART_IMAGE_CONFIG = {
   MAX_FILE_SIZE: 10 * 1024 * 1024, // 10MB max file size
   INLINE_THRESHOLD: 0, // PURE SUPABASE: No inline storage - all images go to Supabase
-  COMPRESSION_QUALITY: 0.85, // JPEG compression quality (increased for better quality)
-  WEBP_QUALITY: 0.8, // WebP compression quality (better compression)
-  MAX_DIMENSION: 2048, // Max width/height for compression
-  AGGRESSIVE_COMPRESSION_THRESHOLD: 500 * 1024, // 500KB - use more aggressive compression
+
+  // Enhanced compression settings for smaller file sizes
+  COMPRESSION_QUALITY: 0.7, // JPEG compression quality (reduced for smaller files)
+  WEBP_QUALITY: 0.65, // WebP compression quality (more aggressive)
+  HIGH_COMPRESSION_QUALITY: 0.6, // For very large files
+  ULTRA_COMPRESSION_QUALITY: 0.5, // For extremely large files
+
+  // Dimension limits for different file sizes
+  MAX_DIMENSION: 1920, // Reduced from 2048 for smaller files
+  LARGE_FILE_MAX_DIMENSION: 1600, // For files > 1MB
+  HUGE_FILE_MAX_DIMENSION: 1280, // For files > 3MB
+
+  // Compression thresholds
+  AGGRESSIVE_COMPRESSION_THRESHOLD: 300 * 1024, // 300KB - use more aggressive compression
+  HIGH_COMPRESSION_THRESHOLD: 1 * 1024 * 1024, // 1MB - use high compression
+  ULTRA_COMPRESSION_THRESHOLD: 3 * 1024 * 1024, // 3MB - use ultra compression
+
   ALLOWED_TYPES: ['image/png', 'image/jpeg', 'image/webp'] as const,
   ALLOWED_EXTENSIONS: ['.png', '.jpg', '.jpeg', '.webp'] as const,
+
   // Progressive JPEG for better loading experience
   PROGRESSIVE_JPEG: true,
+
+  // Target file sizes (we'll try to achieve these)
+  TARGET_SIZE_SMALL: 100 * 1024, // 100KB target for small charts
+  TARGET_SIZE_MEDIUM: 200 * 1024, // 200KB target for medium charts
+  TARGET_SIZE_LARGE: 400 * 1024, // 400KB target for large charts
 };
 
 // Image validation
@@ -72,14 +91,24 @@ export async function compressImage(file: File, maxDimension = CHART_IMAGE_CONFI
 
     img.onload = () => {
       try {
-        // Calculate new dimensions
+        // Calculate new dimensions with aggressive resizing for large files
         let { width, height } = img;
-        const needsResize = width > maxDimension || height > maxDimension;
+
+        // Determine max dimension based on file size for more aggressive compression
+        let effectiveMaxDimension = maxDimension;
+        if (file.size > CHART_IMAGE_CONFIG.ULTRA_COMPRESSION_THRESHOLD) {
+          effectiveMaxDimension = Math.min(maxDimension, CHART_IMAGE_CONFIG.HUGE_FILE_MAX_DIMENSION); // 1280px for huge files
+        } else if (file.size > CHART_IMAGE_CONFIG.HIGH_COMPRESSION_THRESHOLD) {
+          effectiveMaxDimension = Math.min(maxDimension, CHART_IMAGE_CONFIG.LARGE_FILE_MAX_DIMENSION); // 1600px for large files
+        }
+
+        const needsResize = width > effectiveMaxDimension || height > effectiveMaxDimension;
 
         if (needsResize) {
-          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          const ratio = Math.min(effectiveMaxDimension / width, effectiveMaxDimension / height);
           width = Math.round(width * ratio);
           height = Math.round(height * ratio);
+          console.log(`📐 Resizing image: ${img.width}x${img.height} → ${width}x${height} (${effectiveMaxDimension}px limit for ${formatFileSize(file.size)} file)`);
         }
 
         // Set canvas dimensions
@@ -93,49 +122,114 @@ export async function compressImage(file: File, maxDimension = CHART_IMAGE_CONFI
           ctx.drawImage(img, 0, 0, width, height);
         }
 
-        // Smart format and quality selection
-        const isLargeFile = file.size > CHART_IMAGE_CONFIG.AGGRESSIVE_COMPRESSION_THRESHOLD;
+        // Enhanced smart format and quality selection based on file size
         let outputFormat: string;
         let quality: number;
 
-        // Choose optimal format and quality
+        // Determine compression level based on file size
+        const isUltraLarge = file.size > CHART_IMAGE_CONFIG.ULTRA_COMPRESSION_THRESHOLD;
+        const isLarge = file.size > CHART_IMAGE_CONFIG.HIGH_COMPRESSION_THRESHOLD;
+        const isModerate = file.size > CHART_IMAGE_CONFIG.AGGRESSIVE_COMPRESSION_THRESHOLD;
+
+        // Choose optimal format and quality based on file size and type
         if (file.type === 'image/png' && !hasTransparency(ctx, width, height)) {
-          // Convert PNG without transparency to JPEG for better compression
+          // Convert PNG without transparency to JPEG for much better compression
           outputFormat = 'image/jpeg';
-          quality = customQuality ?? (isLargeFile ? 0.75 : CHART_IMAGE_CONFIG.COMPRESSION_QUALITY);
+          if (customQuality !== undefined) {
+            quality = customQuality;
+          } else if (isUltraLarge) {
+            quality = CHART_IMAGE_CONFIG.ULTRA_COMPRESSION_QUALITY; // 0.5 for huge files
+          } else if (isLarge) {
+            quality = CHART_IMAGE_CONFIG.HIGH_COMPRESSION_QUALITY; // 0.6 for large files
+          } else if (isModerate) {
+            quality = CHART_IMAGE_CONFIG.COMPRESSION_QUALITY; // 0.7 for moderate files
+          } else {
+            quality = 0.8; // Higher quality for small files
+          }
         } else if (file.type === 'image/png') {
-          // Keep PNG for transparency
-          outputFormat = 'image/png';
-          quality = 1; // PNG doesn't use quality parameter
-        } else if (supportsWebP() && isLargeFile) {
-          // Use WebP for large files if supported
+          // Keep PNG for transparency but try WebP if supported
+          if (supportsWebP()) {
+            outputFormat = 'image/webp';
+            quality = isUltraLarge ? 0.4 : isLarge ? 0.5 : CHART_IMAGE_CONFIG.WEBP_QUALITY;
+          } else {
+            outputFormat = 'image/png';
+            quality = 1; // PNG doesn't use quality parameter
+          }
+        } else if (supportsWebP()) {
+          // Prefer WebP for all large files due to superior compression
           outputFormat = 'image/webp';
-          quality = customQuality ?? CHART_IMAGE_CONFIG.WEBP_QUALITY;
+          if (customQuality !== undefined) {
+            quality = customQuality;
+          } else if (isUltraLarge) {
+            quality = 0.4; // Very aggressive for huge files
+          } else if (isLarge) {
+            quality = 0.5; // Aggressive for large files
+          } else {
+            quality = CHART_IMAGE_CONFIG.WEBP_QUALITY; // 0.65 for normal files
+          }
         } else {
-          // Default to JPEG
+          // Default to JPEG with aggressive compression
           outputFormat = 'image/jpeg';
-          quality = customQuality ?? (isLargeFile ? 0.75 : CHART_IMAGE_CONFIG.COMPRESSION_QUALITY);
+          if (customQuality !== undefined) {
+            quality = customQuality;
+          } else if (isUltraLarge) {
+            quality = CHART_IMAGE_CONFIG.ULTRA_COMPRESSION_QUALITY; // 0.5
+          } else if (isLarge) {
+            quality = CHART_IMAGE_CONFIG.HIGH_COMPRESSION_QUALITY; // 0.6
+          } else if (isModerate) {
+            quality = CHART_IMAGE_CONFIG.COMPRESSION_QUALITY; // 0.7
+          } else {
+            quality = 0.8; // Higher quality for small files
+          }
         }
 
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Failed to compress image'));
-            return;
-          }
+        // Multi-pass compression to achieve target file sizes
+        const tryCompress = (currentQuality: number, attempt: number = 1): void => {
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Failed to compress image'));
+              return;
+            }
 
-          const compressedFile = new File([blob], file.name, {
-            type: outputFormat,
-            lastModified: Date.now(),
-          });
+            const compressedFile = new File([blob], file.name, {
+              type: outputFormat,
+              lastModified: Date.now(),
+            });
 
-          resolve({
-            compressedFile,
-            originalSize: file.size,
-            compressedSize: compressedFile.size,
-            compressionRatio: file.size / compressedFile.size,
-            outputFormat,
-          });
-        }, outputFormat, quality);
+            // Determine target size based on original file size
+            let targetSize: number;
+            if (file.size > CHART_IMAGE_CONFIG.ULTRA_COMPRESSION_THRESHOLD) {
+              targetSize = CHART_IMAGE_CONFIG.TARGET_SIZE_LARGE; // 400KB for huge files
+            } else if (file.size > CHART_IMAGE_CONFIG.HIGH_COMPRESSION_THRESHOLD) {
+              targetSize = CHART_IMAGE_CONFIG.TARGET_SIZE_MEDIUM; // 200KB for large files
+            } else {
+              targetSize = CHART_IMAGE_CONFIG.TARGET_SIZE_SMALL; // 100KB for normal files
+            }
+
+            // If file is still too large and we can compress more, try again
+            if (compressedFile.size > targetSize && currentQuality > 0.3 && attempt < 4 && outputFormat !== 'image/png') {
+              const newQuality = Math.max(0.3, currentQuality - 0.15); // Reduce quality by 15%
+              console.log(`🔄 File still ${formatFileSize(compressedFile.size)} (target: ${formatFileSize(targetSize)}), trying quality ${newQuality.toFixed(2)} (attempt ${attempt + 1})`);
+              tryCompress(newQuality, attempt + 1);
+              return;
+            }
+
+            // Success - return the compressed file
+            const compressionRatio = file.size / compressedFile.size;
+            console.log(`✅ Compression complete: ${formatFileSize(file.size)} → ${formatFileSize(compressedFile.size)} (${compressionRatio.toFixed(2)}x) [${outputFormat}] quality: ${currentQuality.toFixed(2)}`);
+
+            resolve({
+              compressedFile,
+              originalSize: file.size,
+              compressedSize: compressedFile.size,
+              compressionRatio,
+              outputFormat,
+            });
+          }, outputFormat, currentQuality);
+        };
+
+        // Start compression with initial quality
+        tryCompress(quality);
       } catch (error) {
         reject(error);
       }
@@ -219,16 +313,28 @@ export async function createChartImage(
   let compressed = false;
   let originalSize = file.size;
 
-  // Compress if needed and requested
-  if (shouldCompress && (file.size > CHART_IMAGE_CONFIG.INLINE_THRESHOLD || file.type !== 'image/webp')) {
+  // Always compress images for better storage efficiency (except very small WebP files)
+  const shouldSkipCompression = !shouldCompress ||
+    (file.type === 'image/webp' && file.size < 50 * 1024); // Skip only for small WebP files under 50KB
+
+  if (!shouldSkipCompression) {
     try {
+      console.log(`🔄 Starting compression for ${formatFileSize(file.size)} ${file.type} image...`);
       const compressionResult = await compressImage(file);
-      processedFile = compressionResult.compressedFile;
-      compressed = true;
-      console.log(`📸 Image optimized: ${formatFileSize(originalSize)} → ${formatFileSize(processedFile.size)} (${compressionResult.compressionRatio.toFixed(2)}x) [${compressionResult.outputFormat}]`);
+
+      // Only use compressed version if it's actually smaller
+      if (compressionResult.compressedSize < file.size) {
+        processedFile = compressionResult.compressedFile;
+        compressed = true;
+        console.log(`📸 Image optimized: ${formatFileSize(originalSize)} → ${formatFileSize(processedFile.size)} (${compressionResult.compressionRatio.toFixed(2)}x) [${compressionResult.outputFormat}]`);
+      } else {
+        console.log(`📸 Original file is already optimal: ${formatFileSize(file.size)}`);
+      }
     } catch (error) {
       console.warn('⚠️ Image compression failed, using original:', error);
     }
+  } else {
+    console.log(`⏭️ Skipping compression for small ${file.type} file: ${formatFileSize(file.size)}`);
   }
 
   const dimensions = await getImageDimensions(processedFile);
@@ -270,7 +376,7 @@ export function getImageDataUrl(chartImage: ChartImage): string | null {
 // Storage size calculation for trade
 export function calculateChartAttachmentsSize(chartAttachments?: any): number {
   if (!chartAttachments) return 0;
-  
+
   let totalSize = 0;
   if (chartAttachments.beforeEntry) {
     totalSize += chartAttachments.beforeEntry.size || 0;
@@ -278,6 +384,31 @@ export function calculateChartAttachmentsSize(chartAttachments?: any): number {
   if (chartAttachments.afterExit) {
     totalSize += chartAttachments.afterExit.size || 0;
   }
-  
+
   return totalSize;
+}
+
+// Get compression info for display
+export function getCompressionInfo(chartImage: ChartImage): {
+  isCompressed: boolean;
+  originalSize?: number;
+  compressionRatio?: number;
+  savedSpace?: number;
+  compressionText?: string;
+} {
+  if (!chartImage.compressed || !chartImage.originalSize) {
+    return { isCompressed: false };
+  }
+
+  const compressionRatio = chartImage.originalSize / chartImage.size;
+  const savedSpace = chartImage.originalSize - chartImage.size;
+  const savedPercentage = ((savedSpace / chartImage.originalSize) * 100).toFixed(0);
+
+  return {
+    isCompressed: true,
+    originalSize: chartImage.originalSize,
+    compressionRatio,
+    savedSpace,
+    compressionText: `${savedPercentage}% smaller (${formatFileSize(savedSpace)} saved)`
+  };
 }

@@ -19,7 +19,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
               stroke-dashoffset: 0;
             }
           }
-          
+
           @keyframes fadeInScale {
             0% {
               opacity: 0;
@@ -30,7 +30,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
               transform: scale(1);
             }
           }
-          
+
           @keyframes rotatePulse {
             0%, 100% {
               transform: rotate(0deg) scale(1);
@@ -39,7 +39,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
               transform: rotate(180deg) scale(0.95);
             }
           }
-          
+
           @keyframes glowEffect {
             0%, 100% {
               filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
@@ -58,7 +58,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
           }
         `}
       </style>
-      
+
       {/* Outer decorative ring */}
       <circle
         cx="12"
@@ -89,7 +89,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
             animation: 'drawPath 1.5s ease forwards 0.5s'
           }}
         />
-        
+
         {/* Decorative lines */}
         <path
           d="M8 12H16"
@@ -102,7 +102,7 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
             animation: 'drawPath 0.5s ease forwards 1s'
           }}
         />
-        
+
         {/* Center dot */}
         <circle
           cx="12"
@@ -145,4 +145,4 @@ export const TradeTrackerLogo: React.FC<TradeTrackerLogoProps> = ({ className = 
       />
     </svg>
   );
-}; 
+};

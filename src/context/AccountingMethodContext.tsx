@@ -31,7 +31,6 @@ export const AccountingMethodProvider: React.FC<AccountingMethodProviderProps> =
         localStorage.setItem('accountingMethod', 'cash');
       }
     } catch (error) {
-      console.error('Error loading accounting method from localStorage:', error);
       // Even if localStorage fails, ensure we default to cash basis
       setAccountingMethodState('cash');
     } finally {
@@ -51,8 +50,7 @@ export const AccountingMethodProvider: React.FC<AccountingMethodProviderProps> =
       try {
         localStorage.setItem('accountingMethod', method);
       } catch (error) {
-        console.error('Error saving accounting method to localStorage:', error);
-      }
+        }
     });
   }, [accountingMethod]);
 
@@ -65,10 +63,8 @@ export const AccountingMethodProvider: React.FC<AccountingMethodProviderProps> =
     try {
       localStorage.removeItem('accountingMethod');
       setAccountingMethodState('cash'); // Reset to default
-      console.log('🗑️ Cleared accounting method data');
-    } catch (error) {
-      console.error('❌ Failed to clear accounting method data:', error);
-    }
+      } catch (error) {
+      }
   }, []);
 
   // Memoize the context value to prevent unnecessary re-renders

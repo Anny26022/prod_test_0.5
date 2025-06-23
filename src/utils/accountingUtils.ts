@@ -13,8 +13,6 @@ export function getExitDatesWithFallback(trade: Trade): Array<{ date: string; qt
     { date: trade.exit3Date, qty: trade.exit3Qty || 0, price: trade.exit3Price || 0 }
   ].filter(exit => exit.date && exit.date.trim() !== '' && exit.qty > 0);
 
-
-
   // If we have individual exit data, return it
   if (exits.length > 0) {
     return exits;
@@ -88,11 +86,11 @@ export function groupTradesByMonth(trades: Trade[], useCashBasis: boolean = fals
       if (trade.date) {
         const tradeDate = new Date(trade.date);
         const monthKey = `${tradeDate.toLocaleString('default', { month: 'short' })} ${tradeDate.getFullYear()}`;
-        
+
         if (!groupedTrades[monthKey]) {
           groupedTrades[monthKey] = [];
         }
-        
+
         groupedTrades[monthKey].push(trade);
       }
     }
@@ -112,8 +110,6 @@ export function calculateTradePL(trade: Trade, useCashBasis: boolean = false): n
     // Accrual basis: Use the trade's total realized P/L
     const accrualPL = trade.plRs ?? 0;
 
-
-
     return accrualPL;
   } else {
     // Cash basis: Calculate P/L for the specific exit if it's a cash basis exit
@@ -128,8 +124,6 @@ export function calculateTradePL(trade: Trade, useCashBasis: boolean = false): n
         const pl = trade.buySell === 'Buy'
           ? (correctExitPrice - avgEntry) * cashBasisExit.qty
           : (avgEntry - correctExitPrice) * cashBasisExit.qty;
-
-
 
         return pl;
       }
@@ -249,7 +243,7 @@ export function getTradesForMonth(trades: Trade[], month: string, year: number, 
   } else {
     // Cash basis: Filter by exit dates
     const monthTrades: Trade[] = [];
-    
+
     trades.forEach(trade => {
       if (trade.positionStatus === 'Closed' || trade.positionStatus === 'Partial') {
         const exits = getExitDatesWithFallback(trade);
@@ -275,7 +269,7 @@ export function getTradesForMonth(trades: Trade[], month: string, year: number, 
         });
       }
     });
-    
+
     return monthTrades;
   }
 }

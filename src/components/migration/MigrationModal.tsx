@@ -42,8 +42,7 @@ export const MigrationModal: React.FC<MigrationModalProps> = ({
       const summary = await MigrationService.getMigrationSummary()
       setMigrationSummary(summary)
     } catch (error) {
-      console.error('Failed to load migration summary:', error)
-    }
+      }
   }
 
   const handleStartMigration = async () => {
@@ -74,7 +73,7 @@ export const MigrationModal: React.FC<MigrationModalProps> = ({
     onClose()
   }
 
-  const progressPercentage = migrationProgress 
+  const progressPercentage = migrationProgress
     ? Math.round((migrationProgress.current / migrationProgress.total) * 100)
     : 0
 

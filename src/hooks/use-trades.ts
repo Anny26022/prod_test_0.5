@@ -46,7 +46,6 @@ async function getTradesFromSupabase(): Promise<Trade[]> {
     const trades = await SupabaseService.getAllTrades();
     return trades;
   } catch (error) {
-    console.error('❌ Failed to get trades from Supabase:', error);
     return []; // Always return empty array on error to prevent mock data
   }
 }
@@ -58,7 +57,6 @@ async function saveTradesToSupabase(trades: Trade[]): Promise<boolean> {
     const success = await SupabaseService.saveAllTrades(trades);
     return success;
   } catch (error) {
-    console.error('❌ Failed to save trades to Supabase:', error);
     return false;
   }
 }
@@ -158,7 +156,6 @@ function recalculateAllTrades(
 
   // If skipping expensive calculations, return trades with minimal processing
   if (skipExpensiveCalculations) {
-    console.log(`⚡ Skipping expensive calculations for ${trades.length} trades during bulk import`);
     return sorted.map(trade => ({
       ...trade,
       name: (trade.name || '').toUpperCase(),
@@ -230,7 +227,7 @@ function recalculateAllTrades(
       trade.positionStatus,
       trade.buySell
     );
-    
+
     const rewardRisk = calcRewardRisk(
       trade.cmp || avgExitPrice || trade.entry,
       trade.entry,
@@ -245,12 +242,12 @@ function recalculateAllTrades(
     const pyramidDates = [];
     if (trade.pyramid1Date && trade.pyramid1Qty) pyramidDates.push({ date: trade.pyramid1Date, qty: trade.pyramid1Qty });
     if (trade.pyramid2Date && trade.pyramid2Qty) pyramidDates.push({ date: trade.pyramid2Date, qty: trade.pyramid2Qty });
-    
+
     const exitDatesForHolding = [];
     if (trade.exit1Date && trade.exit1Qty) exitDatesForHolding.push({ date: trade.exit1Date, qty: trade.exit1Qty });
     if (trade.exit2Date && trade.exit2Qty) exitDatesForHolding.push({ date: trade.exit2Date, qty: trade.exit2Qty });
     if (trade.exit3Date && trade.exit3Qty) exitDatesForHolding.push({ date: trade.exit3Date, qty: trade.exit3Qty });
-    
+
     let primaryExitDateForHolding: string | null = null;
     if (allExits.length > 0) {
         const validExitDates = [trade.exit1Date, trade.exit2Date, trade.exit3Date].filter(Boolean) as string[];
@@ -263,9 +260,9 @@ function recalculateAllTrades(
     }
 
     const holdingDays = calcHoldingDays(
-        trade.date, 
-        primaryExitDateForHolding, 
-        pyramidDates, 
+        trade.date,
+        primaryExitDateForHolding,
+        pyramidDates,
         exitDatesForHolding
     );
 
@@ -291,7 +288,7 @@ function recalculateAllTrades(
         }
       })() : 100000;
     const pfImpact = calcPFImpact(accountingAwarePL, accountingAwarePortfolioSize);
-    
+
     const finalOpenQty = Math.max(0, openQty);
 
     // Destructure to omit openHeat if it exists on the trade object from localStorage
@@ -458,7 +455,6 @@ export const useTrades = () => {
 
         if (usedMB > limitMB * 0.8) { // If using more than 80% of available memory
 
-
           // Force garbage collection if available
           if (window.gc) {
             try {
@@ -503,10 +499,7 @@ export const useTrades = () => {
         setSortDescriptor(settings?.sort_descriptor || { column: 'tradeNo', direction: 'ascending' });
         setVisibleColumns(settings?.visible_columns || DEFAULT_VISIBLE_COLUMNS);
 
-        console.log(`📊 Loaded ${initiallyCalculatedTrades.length} trades from IndexedDB`);
-
-      } catch (error) {
-        console.error('❌ Failed to load data:', error);
+        } catch (error) {
         // Set empty state on error
         setTrades([]);
       } finally {
@@ -549,7 +542,6 @@ export const useTrades = () => {
     // Only recalculate if accounting method actually changed
     if (prevAccountingMethodRef.current !== accountingMethod && !isLoading && trades.length > 0) {
 
-
       // Debounce the recalculation to prevent rapid successive calls
       const timeoutId = setTimeout(() => {
         // Use the pure function directly to avoid circular dependency
@@ -565,32 +557,23 @@ export const useTrades = () => {
   }, [accountingMethod]); // Only depend on accounting method to avoid circular dependencies
 
   const addTrade = React.useCallback(async (trade: Trade) => {
-    console.log(`➕ [addTrade] Adding new trade: ${trade.name} (${trade.id})`);
-
     // CRITICAL FIX: Update chart blob tradeIds if this trade has chart attachments
     if (trade.chartAttachments && (trade.chartAttachments.beforeEntry || trade.chartAttachments.afterExit)) {
       try {
-        console.log(`📸 [addTrade] Updating chart blob tradeIds from 'new' to '${trade.id}'`);
-
         // Update beforeEntry blob if exists
         if (trade.chartAttachments.beforeEntry?.storage === 'blob' && trade.chartAttachments.beforeEntry.blobId) {
           await SupabaseService.updateChartImageBlobTradeId(trade.chartAttachments.beforeEntry.blobId, trade.id);
-          console.log(`📸 Updated beforeEntry blob tradeId to ${trade.id}`);
-        }
+          }
 
         // Update afterExit blob if exists
         if (trade.chartAttachments.afterExit?.storage === 'blob' && trade.chartAttachments.afterExit.blobId) {
           await SupabaseService.updateChartImageBlobTradeId(trade.chartAttachments.afterExit.blobId, trade.id);
-          console.log(`📸 Updated afterExit blob tradeId to ${trade.id}`);
-        }
+          }
       } catch (error) {
-        console.error('❌ [addTrade] Failed to update chart blob tradeIds:', error);
-      }
+        }
     }
 
     setTrades(prev => {
-      console.log(`➕ [addTrade] Current trades count: ${prev.length}`);
-
       // Add new trade to the array
       const combinedTrades = [...prev, trade];
 
@@ -612,21 +595,14 @@ export const useTrades = () => {
         t.tradeNo = String(index + 1);
       });
 
-      console.log(`📅 Sorted ${combinedTrades.length} trades chronologically and reassigned trade numbers`);
-
       // Use the memoized recalculation helper
       const newTrades = recalculateTradesWithCurrentPortfolio(combinedTrades);
-      console.log(`➕ [addTrade] After adding and recalculating: ${newTrades.length} trades`);
-
       // Persist to Supabase asynchronously
       saveTradesToSupabase(newTrades).then(success => {
-        console.log(`📊 [addTrade] Supabase save ${success ? 'successful' : 'failed'}`);
         if (!success) {
-          console.error('❌ [addTrade] Failed to save to Supabase - data may be lost on refresh!');
-        }
+          }
       }).catch(error => {
-        console.error('❌ [addTrade] Supabase save error:', error);
-      });
+        });
 
       return newTrades;
     });
@@ -638,33 +614,24 @@ export const useTrades = () => {
   const updateCallbacksRef = React.useRef<Map<string, () => void>>(new Map());
 
   const updateTrade = React.useCallback(async (updatedTrade: Trade, onComplete?: () => void) => {
-    console.log(`✏️ [updateTrade] Updating trade: ${updatedTrade.name} (${updatedTrade.id})`);
-
     // CRITICAL FIX: Update chart blob tradeIds if this trade has chart attachments
     if (updatedTrade.chartAttachments && (updatedTrade.chartAttachments.beforeEntry || updatedTrade.chartAttachments.afterExit)) {
       try {
-        console.log(`📸 [updateTrade] Updating chart blob tradeIds for trade '${updatedTrade.id}'`);
-
         // Update beforeEntry blob if exists
         if (updatedTrade.chartAttachments.beforeEntry?.storage === 'blob' && updatedTrade.chartAttachments.beforeEntry.blobId) {
           await SupabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.beforeEntry.blobId, updatedTrade.id);
-          console.log(`📸 Updated beforeEntry blob tradeId to ${updatedTrade.id}`);
-        }
+          }
 
         // Update afterExit blob if exists
         if (updatedTrade.chartAttachments.afterExit?.storage === 'blob' && updatedTrade.chartAttachments.afterExit.blobId) {
           await SupabaseService.updateChartImageBlobTradeId(updatedTrade.chartAttachments.afterExit.blobId, updatedTrade.id);
-          console.log(`📸 Updated afterExit blob tradeId to ${updatedTrade.id}`);
-        }
+          }
       } catch (error) {
-        console.error('❌ [updateTrade] Failed to update chart blob tradeIds:', error);
-      }
+        }
     }
 
     // Store pending update
     pendingUpdatesRef.current.set(updatedTrade.id, updatedTrade);
-    console.log(`✏️ [updateTrade] Stored pending update. Total pending: ${pendingUpdatesRef.current.size}`);
-
     // Store callback if provided
     if (onComplete) {
       updateCallbacksRef.current.set(updatedTrade.id, onComplete);
@@ -673,26 +640,19 @@ export const useTrades = () => {
     // Clear existing debounce timer
     if (debouncedRecalculateRef.current) {
       clearTimeout(debouncedRecalculateRef.current);
-      console.log(`✏️ [updateTrade] Cleared existing debounce timer`);
-    }
+      }
 
     // Schedule debounced recalculation
     debouncedRecalculateRef.current = setTimeout(() => {
-      console.log(`⏰ [updateTrade] Debounced execution starting...`);
-
       // Get all pending updates and callbacks
       const pendingUpdates = Array.from(pendingUpdatesRef.current.values());
       const callbacks = Array.from(updateCallbacksRef.current.values());
-      console.log(`⏰ [updateTrade] Processing ${pendingUpdates.length} pending updates`);
-
       // Clear pending updates and callbacks
       pendingUpdatesRef.current.clear();
       updateCallbacksRef.current.clear();
 
       // Apply all pending updates and recalculate
       setTrades(currentTrades => {
-        console.log(`⏰ [updateTrade] Applying updates to ${currentTrades.length} trades`);
-
         const updatedTrades = currentTrades.map(trade => {
           // CRITICAL FIX: Handle cash basis expanded trade IDs
           // Find pending updates by checking both exact ID match and original ID match
@@ -709,9 +669,7 @@ export const useTrades = () => {
           });
 
           if (pendingUpdate) {
-            console.log(`⏰ [updateTrade] Applying update to trade: ${trade.name} (original ID: ${trade.id}, update ID: ${pendingUpdate.id})`);
-
-            // CRITICAL: For cash basis updates, we need to merge the changes into the original trade
+            // CRITICAL: For cash basis updates, we need to merge the changes into the original tradeiginal trade
             // but preserve the original trade ID (not the expanded ID)
             const updatedTrade = { ...pendingUpdate, id: trade.id };
             return updatedTrade;
@@ -719,72 +677,52 @@ export const useTrades = () => {
           return trade;
         });
 
-        console.log(`⏰ [updateTrade] Starting recalculation...`);
         const recalculatedTrades = recalculateTradesWithCurrentPortfolio(updatedTrades);
 
-        console.log(`⏰ [updateTrade] Saving to Supabase...`);
         saveTradesToSupabase(recalculatedTrades).then(saveSuccess => {
-          console.log(`⏰ [updateTrade] Supabase save ${saveSuccess ? 'successful' : 'failed'}`);
-        });
+          });
 
         // Execute all callbacks after update is complete
         callbacks.forEach(callback => {
           try {
             callback();
           } catch (error) {
-            console.error('Error executing update callback:', error);
-          }
+            }
         });
 
-        console.log(`✅ [updateTrade] Update process completed`);
         return recalculatedTrades;
       });
     }, 200); // Reduced to 200ms to prevent race conditions with user input
   }, [recalculateTradesWithCurrentPortfolio]);
 
   const deleteTrade = React.useCallback(async (id: string) => {
-    console.log(`🗑️ [deleteTrade] Starting delete for trade ID: ${id}`);
-
     // CRITICAL FIX: Handle cash basis expanded trade IDs
     // Extract original trade ID from expanded IDs like "original_id_exit_0"
     const originalTradeId = id.includes('_exit_') ? id.split('_exit_')[0] : id;
-    console.log(`🗑️ [deleteTrade] Original trade ID: ${originalTradeId} (from ${id})`);
 
     // First, delete associated chart images
     try {
       const { ChartImageService } = await import('../services/chartImageService');
       const chartImagesDeleted = await ChartImageService.deleteTradeChartImages(originalTradeId);
-      console.log(`🗑️ [deleteTrade] Chart images deletion ${chartImagesDeleted ? 'successful' : 'failed'}`);
-    } catch (error) {
-      console.error('❌ [deleteTrade] Failed to delete chart images:', error);
+      } catch (error) {
       // Continue with trade deletion even if chart deletion fails
     }
 
     setTrades(prev => {
-      console.log(`🗑️ [deleteTrade] Current trades count: ${prev.length}`);
-
       // Find the trade to delete using the original ID
       const tradeToDelete = prev.find(trade => trade.id === originalTradeId);
       if (!tradeToDelete) {
-        console.error(`❌ [deleteTrade] Trade with original ID ${originalTradeId} not found!`);
-        console.log(`🗑️ [deleteTrade] Available trade IDs:`, prev.map(t => t.id));
+        console.warn('Trade not found for deletion:', originalTradeId);
         return prev; // Return unchanged if trade not found
       }
 
-      console.log(`🗑️ [deleteTrade] Found trade to delete: ${tradeToDelete.name} (${tradeToDelete.tradeNo})`);
-
       // Filter out the trade using the original ID
       const filteredTrades = prev.filter(trade => trade.id !== originalTradeId);
-      console.log(`🗑️ [deleteTrade] After filtering: ${filteredTrades.length} trades remaining`);
-
       // Use the memoized recalculation helper
       const newTrades = recalculateTradesWithCurrentPortfolio(filteredTrades);
-      console.log(`🗑️ [deleteTrade] After recalculation: ${newTrades.length} trades`);
-
       // Persist to Supabase
       saveTradesToSupabase(newTrades).then(saveSuccess => {
-        console.log(`🗑️ [deleteTrade] Supabase save ${saveSuccess ? 'successful' : 'failed'}`);
-      });
+        });
 
       return newTrades;
     });
@@ -792,7 +730,6 @@ export const useTrades = () => {
 
   // Bulk import function for better performance with optimized calculations
   const bulkImportTrades = React.useCallback((importedTrades: Trade[]) => {
-    console.log(`🚀 Starting optimized bulk import of ${importedTrades.length} trades...`);
     const startTime = performance.now();
 
     setTrades(prev => {
@@ -817,35 +754,25 @@ export const useTrades = () => {
         trade.tradeNo = String(index + 1);
       });
 
-      console.log(`📅 Sorted ${combinedTrades.length} trades chronologically and reassigned trade numbers`);
-
       // First pass: Skip expensive calculations for faster import
       const quickProcessedTrades = recalculateTradesWithCurrentPortfolio(combinedTrades, true);
       // Save to Supabase asynchronously
       saveTradesToSupabase(quickProcessedTrades).then(success => {
-        console.log(`📊 [bulkImport] Quick save ${success ? 'successful' : 'failed'}`);
-      });
+        });
 
       const endTime = performance.now();
-      console.log(`⚡ Fast bulk import completed in ${(endTime - startTime).toFixed(2)}ms`);
-      console.log(`🔄 Scheduling full recalculation in background...`);
-
       // Schedule full recalculation in the background after a short delay
       setTimeout(() => {
         const recalcStartTime = performance.now();
-        console.log(`🧮 Starting full recalculation of ${quickProcessedTrades.length} trades...`);
         setIsRecalculating(true);
 
         setTrades(currentTrades => {
           const fullyCalculatedTrades = recalculateTradesWithCurrentPortfolio(currentTrades, false);
           // Save fully calculated trades to Supabase
           saveTradesToSupabase(fullyCalculatedTrades).then(success => {
-            console.log(`📊 [bulkImport] Full recalc save ${success ? 'successful' : 'failed'}`);
-          });
+            });
 
           const recalcEndTime = performance.now();
-          console.log(`✅ Full recalculation completed in ${(recalcEndTime - recalcStartTime).toFixed(2)}ms`);
-          console.log(`📊 Total import + recalculation time: ${(recalcEndTime - startTime).toFixed(2)}ms`);
 
           setIsRecalculating(false);
           return fullyCalculatedTrades;
@@ -857,8 +784,6 @@ export const useTrades = () => {
   }, [recalculateTradesWithCurrentPortfolio]);
 
   const clearAllTrades = React.useCallback(async () => {
-    console.log('🗑️ Starting clearAllTrades process...');
-
     const success = await clearAllTradeAndSettingsData();
 
     if (success) {
@@ -874,10 +799,8 @@ export const useTrades = () => {
       if (window.gc) {
         try {
           window.gc();
-          console.log('🗑️ Forced garbage collection');
-        } catch (error) {
-          console.log('⚠️ Garbage collection not available');
-        }
+          } catch (error) {
+          }
       }
 
       // Clear any cached data in memory
@@ -888,11 +811,9 @@ export const useTrades = () => {
         (window as any).settingsCache = undefined;
       }
 
-      console.log('✅ All trades and state cleared successfully');
       return true;
     }
 
-    console.error('❌ Failed to clear trade data');
     return false;
   }, []);
 
@@ -1012,7 +933,7 @@ export const useTrades = () => {
             exits.forEach((exit, exitIndex) => {
               const expandedTrade: Trade = {
                 ...trade,
-                id: `${trade.id}_exit_${exitIndex}`,
+                id: trade.id + '_exit_' + exitIndex,
                 _cashBasisExit: {
                   date: exit.date,
                   qty: exit.qty,
@@ -1035,8 +956,6 @@ export const useTrades = () => {
           expandedTrades.push(trade);
         }
       });
-
-
 
       // CRITICAL FIX: Apply global filter to expanded trades BEFORE grouping
       // This ensures trades with multiple exits are properly filtered by each exit date

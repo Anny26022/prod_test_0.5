@@ -140,7 +140,6 @@ export class TradeJournalDB extends Dexie {
       backups: '++id, type, createdAt',
       chartImageBlobs: 'id, tradeId, imageType, uploadedAt' // NEW: Chart image blob storage
     }).upgrade(tx => {
-      console.log('🔄 Upgrading database to version 2 (Chart Attachments)...');
       // The chartImageBlobs table will be created automatically
       // Existing trades will work without modification as chartAttachments field is optional
       return tx.trades.toCollection().modify(trade => {
@@ -207,14 +206,13 @@ function cleanDataForIndexedDB(data: any): any {
 
 // Database utility functions
 export class DatabaseService {
-  
+
   // ===== TRADES =====
-  
+
   static async getAllTrades(): Promise<TradeRecord[]> {
     try {
       return await db.trades.orderBy('tradeNo').toArray();
     } catch (error) {
-      console.error('❌ Failed to get trades from IndexedDB:', error);
       return [];
     }
   }
@@ -224,7 +222,6 @@ export class DatabaseService {
       const trade = await db.trades.get(id);
       return trade || null;
     } catch (error) {
-      console.error('❌ Failed to get trade from IndexedDB:', error);
       return null;
     }
   }
@@ -263,13 +260,12 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to delete trade from IndexedDB:', error);
       return false;
     }
   }
 
   // ===== SETTINGS =====
-  
+
   static async getTradeSettings(): Promise<TradeSettings | null> {
     try {
       const allSettings = await db.tradeSettings.toArray();
@@ -279,7 +275,6 @@ export class DatabaseService {
       allSettings.sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0));
       return allSettings[0];
     } catch (error) {
-      console.error('❌ Failed to get trade settings from IndexedDB:', error);
       return null;
     }
   }
@@ -298,7 +293,7 @@ export class DatabaseService {
   }
 
   // ===== USER PREFERENCES =====
-  
+
   static async getUserPreferences(): Promise<UserPreferences | null> {
     try {
       const allPrefs = await db.userPreferences.toArray();
@@ -326,7 +321,7 @@ export class DatabaseService {
   }
 
   // ===== PORTFOLIO DATA =====
-  
+
   static async getPortfolioData(): Promise<PortfolioData[]> {
     try {
       return await db.portfolioData.toArray();
@@ -344,7 +339,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to save portfolio data to IndexedDB:', error);
       return false;
     }
   }
@@ -373,10 +367,8 @@ export class DatabaseService {
         await db.backups.bulkDelete(toDelete.map(b => b.id!));
       }
 
-
       return true;
     } catch (error) {
-      console.error('❌ Failed to create backup:', error);
       return false;
     }
   }
@@ -390,7 +382,6 @@ export class DatabaseService {
       backups.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
       return backups[0];
     } catch (error) {
-      console.error('❌ Failed to get latest backup:', error);
       return null;
     }
   }
@@ -401,7 +392,6 @@ export class DatabaseService {
     try {
       return await db.taxData.where('year').equals(year).first() || null;
     } catch (error) {
-      console.error('❌ Failed to get tax data from IndexedDB:', error);
       return null;
     }
   }
@@ -412,7 +402,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to save tax data to IndexedDB:', error);
       return false;
     }
   }
@@ -423,7 +412,6 @@ export class DatabaseService {
     try {
       return await db.commentaryData.where('year').equals(year).first() || null;
     } catch (error) {
-      console.error('❌ Failed to get commentary data from IndexedDB:', error);
       return null;
     }
   }
@@ -434,7 +422,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to save commentary data to IndexedDB:', error);
       return false;
     }
   }
@@ -450,7 +437,6 @@ export class DatabaseService {
       allConfigs.sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0));
       return allConfigs[0];
     } catch (error) {
-      console.error('❌ Failed to get dashboard config from IndexedDB:', error);
       return null;
     }
   }
@@ -461,10 +447,8 @@ export class DatabaseService {
         await db.dashboardConfig.clear();
         await db.dashboardConfig.add({ config });
       });
-      console.log('✅ Saved dashboard config to IndexedDB');
       return true;
     } catch (error) {
-      console.error('❌ Failed to save dashboard config to IndexedDB:', error);
       return false;
     }
   }
@@ -480,7 +464,6 @@ export class DatabaseService {
       allMilestones.sort((a, b) => (b.updatedAt?.getTime() || 0) - (a.updatedAt?.getTime() || 0));
       return allMilestones[0];
     } catch (error) {
-      console.error('❌ Failed to get milestones data from IndexedDB:', error);
       return null;
     }
   }
@@ -494,10 +477,8 @@ export class DatabaseService {
         await db.milestonesData.clear();
         await db.milestonesData.add({ achievements: cleanedAchievements });
       });
-      console.log('✅ Saved milestones data to IndexedDB');
       return true;
     } catch (error) {
-      console.error('❌ Failed to save milestones data to IndexedDB:', error);
       return false;
     }
   }
@@ -509,7 +490,6 @@ export class DatabaseService {
       const record = await db.miscData.where('key').equals(key).first();
       return record ? record.value : null;
     } catch (error) {
-      console.error('❌ Failed to get misc data from IndexedDB:', error);
       return null;
     }
   }
@@ -536,7 +516,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to delete misc data from IndexedDB:', error);
       return false;
     }
   }
@@ -545,7 +524,6 @@ export class DatabaseService {
 
   static async saveChartImageBlob(imageBlob: ChartImageBlob): Promise<boolean> {
     try {
-
 
       // Validate blob data before saving
       if (!imageBlob.data || !(imageBlob.data instanceof Blob)) {
@@ -562,7 +540,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ DatabaseService: Failed to save chart image blob:', error);
       return false;
     }
   }
@@ -573,7 +550,6 @@ export class DatabaseService {
       const blob = await db.chartImageBlobs.get(id);
 
       if (blob) {
-
 
         // Validate the blob data
         if (!blob.data || !(blob.data instanceof Blob)) {
@@ -591,7 +567,6 @@ export class DatabaseService {
 
       return blob || null;
     } catch (error) {
-      console.error('❌ Failed to get chart image blob:', error);
       return null;
     }
   }
@@ -600,7 +575,6 @@ export class DatabaseService {
     try {
       return await db.chartImageBlobs.toArray();
     } catch (error) {
-      console.error('❌ Failed to get all chart image blobs:', error);
       return [];
     }
   }
@@ -609,7 +583,6 @@ export class DatabaseService {
     try {
       return await db.chartImageBlobs.where('tradeId').equals(tradeId).toArray();
     } catch (error) {
-      console.error('❌ Failed to get trade chart image blobs:', error);
       return [];
     }
   }
@@ -620,7 +593,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to delete chart image blob:', error);
       return false;
     }
   }
@@ -637,7 +609,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to update chart image blob tradeId:', error);
       return false;
     }
   }
@@ -648,7 +619,6 @@ export class DatabaseService {
 
       return true;
     } catch (error) {
-      console.error('❌ Failed to delete trade chart image blobs:', error);
       return false;
     }
   }
@@ -657,7 +627,6 @@ export class DatabaseService {
     try {
       return await db.chartImageBlobs.toArray();
     } catch (error) {
-      console.error('❌ Failed to get all chart image blobs:', error);
       return [];
     }
   }
@@ -667,7 +636,6 @@ export class DatabaseService {
       const blobs = await db.chartImageBlobs.toArray();
       return blobs.reduce((total, blob) => total + blob.size, 0);
     } catch (error) {
-      console.error('❌ Failed to calculate chart image blobs size:', error);
       return 0;
     }
   }
@@ -677,10 +645,8 @@ export class DatabaseService {
   static async clearAllChartImages(): Promise<boolean> {
     try {
       await db.chartImageBlobs.clear();
-      console.log('✅ All chart images cleared from database');
       return true;
     } catch (error) {
-      console.error('❌ Failed to clear chart images:', error);
       return false;
     }
   }
@@ -695,10 +661,8 @@ export class DatabaseService {
       const tradeIds = new Set(trades.map(trade => trade.id));
       const orphanedBlobs = blobs.filter(blob => !tradeIds.has(blob.tradeId));
 
-      console.log(`Found ${orphanedBlobs.length} orphaned chart images`);
       return orphanedBlobs;
     } catch (error) {
-      console.error('❌ Failed to find orphaned chart images:', error);
       return [];
     }
   }
@@ -727,36 +691,23 @@ export class DatabaseService {
         db.trades.toArray()
       ]);
 
-      console.log('=== CHART IMAGE DATABASE INSPECTION ===');
-      console.log(`Total chart image blobs: ${blobs.length}`);
-      console.log(`Total trades: ${trades.length}`);
-
       const tradeIds = new Set(trades.map(trade => trade.id));
       const orphanedBlobs = blobs.filter(blob => !tradeIds.has(blob.tradeId));
       const validBlobs = blobs.filter(blob => tradeIds.has(blob.tradeId));
 
-      console.log(`Valid chart images: ${validBlobs.length}`);
-      console.log(`Orphaned chart images: ${orphanedBlobs.length}`);
-
       if (orphanedBlobs.length > 0) {
-        console.log('Orphaned chart images:');
-        orphanedBlobs.forEach(blob => {
-          console.log(`- ${blob.filename} (${blob.size} bytes) for trade ${blob.tradeId}`);
-        });
+        // Found orphaned blobs - could clean them up here if needed
       }
 
       if (validBlobs.length > 0) {
-        console.log('Valid chart images:');
         validBlobs.forEach(blob => {
           const trade = trades.find(t => t.id === blob.tradeId);
-          console.log(`- ${blob.filename} (${blob.size} bytes) for trade ${trade?.name || 'Unknown'}`);
+          // Found valid blob linked to existing trade
         });
       }
 
-      console.log('=== END INSPECTION ===');
-    } catch (error) {
-      console.error('❌ Failed to inspect chart image database:', error);
-    }
+      } catch (error) {
+      }
   }
 
   // ===== CHART IMAGE NAVIGATION =====
@@ -786,7 +737,6 @@ export class DatabaseService {
         };
       });
     } catch (error) {
-      console.error('❌ Failed to get chart image blobs with trade info:', error);
       return [];
     }
   }
@@ -823,7 +773,6 @@ export class DatabaseService {
 
       return blobs;
     } catch (error) {
-      console.error('❌ Failed to get filtered chart image blobs:', error);
       return [];
     }
   }
@@ -870,7 +819,6 @@ export class DatabaseService {
         total: tradesCount + settingsCount + prefsCount + portfolioCount + taxCount + commentaryCount + dashboardCount + milestonesCount + miscCount + backupsCount + chartImagesCount
       };
     } catch (error) {
-      console.error('❌ Failed to get database size:', error);
       return { trades: 0, chartImages: 0, total: 0 };
     }
   }

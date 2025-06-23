@@ -60,8 +60,6 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
     return getAllMonthlyTruePortfolios(filteredTrades, useCashBasis);
   }, [getAllMonthlyTruePortfolios, filteredTrades, useCashBasis]);
 
-
-
   // Get the earliest and latest trade dates to determine the date range
   // For cash basis, we need to consider exit dates as well
   const { startDate, endDate } = React.useMemo(() => {
@@ -92,7 +90,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
       endDate: sortedDates[sortedDates.length - 1] || new Date()
     };
   }, [trades, useCashBasis]);
-  
+
   // Helper function to check if a month is within the global filter range
   const isMonthInGlobalFilter = React.useCallback((month: string, year: number) => {
     if (globalFilter.type === 'all') {
@@ -187,7 +185,7 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
       return { ...d, drawdown };
     });
   }, [processedChartData]);
-  
+
   const volatilityData = React.useMemo(() => {
     function rollingStd(arr: number[], window: number) {
       return arr.map((_, i) => {
@@ -239,13 +237,13 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--heroui-divider))" />
-            <XAxis 
-              dataKey="month" 
+            <XAxis
+              dataKey="month"
               axisLine={false}
               tickLine={false}
               dy={10}
             />
-            <YAxis 
+            <YAxis
               tickFormatter={(value) => formatCurrency(value)}
               axisLine={false}
               tickLine={false}
@@ -285,13 +283,13 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
               }}
             />
             <Legend />
-            <Area 
-              type="monotone" 
-              dataKey="capital" 
+            <Area
+              type="monotone"
+              dataKey="capital"
               name="Portfolio Value"
-              stroke="hsl(var(--heroui-primary))" 
+              stroke="hsl(var(--heroui-primary))"
               fillOpacity={1}
-              fill="url(#colorCapital)" 
+              fill="url(#colorCapital)"
               strokeWidth={2}
               activeDot={{ r: 6, strokeWidth: 2 }}
             />
@@ -308,13 +306,13 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--heroui-divider))" />
-            <XAxis 
-              dataKey="month" 
+            <XAxis
+              dataKey="month"
               axisLine={false}
               tickLine={false}
               dy={10}
             />
-            <YAxis 
+            <YAxis
               tickFormatter={(value) => `${value.toFixed(0)}%`}
               axisLine={false}
               tickLine={false}
@@ -348,13 +346,13 @@ export const PerformanceChart: React.FC<PerformanceChartProps> = (props) => {
               }}
             />
             <Legend />
-            <Area 
-              type="monotone" 
-              dataKey="plPercentage" 
+            <Area
+              type="monotone"
+              dataKey="plPercentage"
               name="P&L Percentage"
-              stroke="hsl(var(--heroui-success))" 
+              stroke="hsl(var(--heroui-success))"
               fillOpacity={1}
-              fill="url(#colorPL)" 
+              fill="url(#colorPL)"
               strokeWidth={2}
               activeDot={{ r: 6, strokeWidth: 2 }}
             />

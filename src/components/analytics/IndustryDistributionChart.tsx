@@ -67,7 +67,7 @@ const IndustryDistributionChart: React.FC<Props> = ({ data, colors, title }) => 
     }
     return null;
   };
-  
+
   const RADIAN = Math.PI / 180;
   const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
     const radius = innerRadius + (outerRadius - innerRadius) * 0.6;
@@ -125,27 +125,27 @@ const IndustryDistributionChart: React.FC<Props> = ({ data, colors, title }) => 
                 <div className="w-full">
                     <h3 className="text-md font-semibold text-center text-foreground-600 mb-4">Top {title}s</h3>
                      <ResponsiveContainer width="100%" height={280}>
-                        <BarChart 
-                            data={chartData} 
-                            layout="vertical" 
+                        <BarChart
+                            data={chartData}
+                            layout="vertical"
                             margin={{ top: 0, right: 30, left: 10, bottom: 0 }}
                         >
                             <CartesianGrid strokeDasharray="3 3" stroke="var(--divider)" horizontal={false} />
-                            <XAxis 
-                                type="number" 
-                                tickFormatter={(tick) => `${Math.round(tick)}%`} 
-                                domain={[0, 'dataMax']} 
-                                tick={{ fontSize: 11, fill: 'var(--foreground)' }} 
-                                axisLine={false} 
+                            <XAxis
+                                type="number"
+                                tickFormatter={(tick) => `${Math.round(tick)}%`}
+                                domain={[0, 'dataMax']}
+                                tick={{ fontSize: 11, fill: 'var(--foreground)' }}
+                                axisLine={false}
                                 tickLine={false}
                                 tickCount={5}
                             />
-                            <YAxis 
-                              dataKey="name" 
-                              type="category" 
-                              width={120} 
-                              tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 600 }} 
-                              axisLine={false} 
+                            <YAxis
+                              dataKey="name"
+                              type="category"
+                              width={120}
+                              tick={{ fontSize: 12, fill: 'var(--foreground)', fontWeight: 600 }}
+                              axisLine={false}
                               tickLine={false}
                               interval={0}
                               tickFormatter={(value) => value.length > 18 ? `${value.substring(0, 17)}...` : value}
@@ -166,4 +166,4 @@ const IndustryDistributionChart: React.FC<Props> = ({ data, colors, title }) => 
   );
 };
 
-export default IndustryDistributionChart; 
+export default IndustryDistributionChart;

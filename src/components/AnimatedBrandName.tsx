@@ -19,7 +19,7 @@ export const AnimatedBrandName: React.FC<AnimatedBrandNameProps> = ({ className 
               opacity: 1;
             }
           }
-          
+
           @keyframes glowPulse {
             0%, 100% {
               text-shadow: 0 0 0 rgba(255, 255, 255, 0);
@@ -67,4 +67,4 @@ export const AnimatedBrandName: React.FC<AnimatedBrandNameProps> = ({ className 
       </div>
     </div>
   );
-}; 
+};
