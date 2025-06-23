@@ -617,9 +617,23 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
 
     // Helper function to check if a column has meaningful data
     const hasValidData = (columnIndex: number): boolean => {
-      if (!parsedData || columnIndex >= headers.length) return false;
+      if (!parsedData || columnIndex >= headers.length) return true; // Default to true
 
-      // Check first 10 rows to see if column has any non-empty, meaningful data
+      const columnName = headers[columnIndex];
+
+      // For optional fields that are commonly empty, always return true
+      const optionalFields = [
+        'Setup', 'TSL (₹)', 'CMP (₹)', 'P2 Price (₹)', 'P2 Qty', 'P2 Date',
+        'E3 Price (₹)', 'E3 Qty', 'E3 Date', 'Open Qty', 'Exit Trigger',
+        'Growth Areas', 'Notes', 'Charts'
+      ];
+
+      if (optionalFields.some(field => columnName.includes(field))) {
+        console.log(`✅ Allowing empty optional field: ${columnName}`);
+        return true;
+      }
+
+      // Check first 10 rows to see if column has any data (more thorough check)
       const sampleRows = parsedData.rows.slice(0, 10);
       let nonEmptyCount = 0;
 
@@ -631,8 +645,34 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
         }
       }
 
-      // Column should have data in at least 30% of sample rows to be considered valid
-      return nonEmptyCount >= Math.max(1, Math.ceil(sampleRows.length * 0.3));
+      // Column should have data in at least 1 row to be considered valid (very lenient)
+      const isValid = nonEmptyCount >= 1;
+      if (!isValid) {
+        console.log(`📊 Column ${headers[columnIndex]} has no valid data (${nonEmptyCount}/${sampleRows.length} rows)`);
+      }
+      return isValid;
+    };
+
+    // Helper function to validate if column data matches expected field type
+    const validateFieldDataType = (field: string, columnIndex: number): boolean => {
+      if (!parsedData || columnIndex >= headers.length) return true; // Default to true if no data
+
+      const columnHeader = headers[columnIndex].toLowerCase();
+
+      // Only prevent very specific wrong mappings that we know cause issues
+      if (field === 'cmp' && (columnHeader.includes('r:r') || columnHeader.includes('reward'))) {
+        console.log(`🚫 Preventing CMP from mapping to ${headers[columnIndex]} (contains reward/risk)`);
+        return false;
+      }
+
+      if (field === 'rewardRisk' && (columnHeader.includes('cmp') && !columnHeader.includes('r:r'))) {
+        console.log(`🚫 Preventing rewardRisk from mapping to ${headers[columnIndex]} (CMP field)`);
+        return false;
+      }
+
+      // For all other cases, be extremely permissive
+      console.log(`✅ Allowing ${field} to map to ${headers[columnIndex]}`);
+      return true;
     };
 
     // Enhanced similarity mapping - ONLY for user input fields (auto-populated fields excluded)
@@ -643,28 +683,46 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       'name': ['name', 'stock', 'symbol', 'stock name', 'company', 'scrip', 'ticker', 'instrument'],
       'setup': ['setup', 'strategy', 'pattern', 'setup type', 'trade setup', 'setup name'],
       'buySell': ['buy/sell', 'buysell', 'side', 'action', 'transaction type', 'buy sell', 'direction', 'buy/ sell'],
-      'entry': ['entry', 'entry price', 'buy price', 'price', 'entry rate', 'buy rate'],
-      'sl': ['sl', 'stop loss', 'stoploss', 'stop', 'sl price', 'stop price'],
-      'tsl': ['tsl', 'trailing sl', 'trailing stop', 'trail sl', 'trailing stop loss'],
-      'initialQty': ['qty', 'quantity', 'initial qty', 'shares', 'units', 'volume', 'size', 'initial qty', 'base qty'],
-      'pyramid1Price': ['pyramid 1 price', 'p1 price', 'p-1 price', 'pyramid1 price', 'pyr1 price', 'pyramid-1 price', 'pyramid-1 price'],
-      'pyramid1Qty': ['pyramid 1 qty', 'p1 qty', 'p-1 qty', 'pyramid1 qty', 'pyr1 qty', 'p-1\nqty'],
-      'pyramid1Date': ['pyramid 1 date', 'p1 date', 'p-1 date', 'pyramid1 date', 'pyr1 date', 'p-1\ndate'],
-      'pyramid2Price': ['pyramid 2 price', 'p2 price', 'p-2 price', 'pyramid2 price', 'pyr2 price', 'pyramid-2\nprice', 'pyramid-2 price'],
-      'pyramid2Qty': ['pyramid 2 qty', 'p2 qty', 'p-2 qty', 'pyramid2 qty', 'pyr2 qty', 'p-2\nqty'],
-      'pyramid2Date': ['pyramid 2 date', 'p2 date', 'p-2 date', 'pyramid2 date', 'pyr2 date', 'p-2\ndate'],
-      'exit1Price': ['exit 1 price', 'e1 price', 'exit1 price', 'sell 1 price', 'exit price', 'exit-1\nprice', 'exit-1 price'],
-      'exit1Qty': ['exit 1 qty', 'e1 qty', 'exit1 qty', 'sell 1 qty', 'exit qty', 'exit-1\nqty'],
+      'entry': ['entry', 'entry price', 'buy price', 'price', 'entry rate', 'buy rate', 'entry (₹)'],
+      'avgEntry': ['avg entry', 'average entry', 'avg. entry', 'avg entry (₹)', 'average entry price', 'avg entry price'],
+      'sl': ['sl', 'stop loss', 'stoploss', 'stop', 'sl price', 'stop price', 'sl (₹)'],
+      'tsl': ['tsl', 'trailing sl', 'trailing stop', 'trail sl', 'trailing stop loss', 'tsl (₹)'],
+      'cmp': ['cmp', 'current price', 'market price', 'ltp', 'last traded price', 'cmp (₹)', 'current market price'],
+      'initialQty': ['qty', 'quantity', 'initial qty', 'shares', 'units', 'volume', 'size', 'initial qty', 'base qty', 'initial qty'],
+      'positionSize': ['position size', 'pos size', 'pos. size', 'position value', 'trade size'],
+      'allocation': ['allocation', 'allocation %', 'allocation (%)', 'alloc', 'alloc %'],
+      'slPercent': ['sl %', 'sl percent', 'stop loss %', 'stop loss percent', 'sl percentage'],
+      'pyramid1Price': ['pyramid 1 price', 'p1 price', 'p-1 price', 'pyramid1 price', 'pyr1 price', 'pyramid-1 price', 'pyramid-1 price (₹)', 'p1 price (₹)'],
+      'pyramid1Qty': ['pyramid 1 qty', 'p1 qty', 'p-1 qty', 'pyramid1 qty', 'pyr1 qty', 'p-1\nqty', 'p-1 qty', 'p1 qty'],
+      'pyramid1Date': ['pyramid 1 date', 'p1 date', 'p-1 date', 'pyramid1 date', 'pyr1 date', 'p-1\ndate', 'p-1 date', 'p1 date'],
+      'pyramid2Price': ['pyramid 2 price', 'p2 price', 'p-2 price', 'pyramid2 price', 'pyr2 price', 'pyramid-2\nprice', 'pyramid-2 price', 'pyramid-2 price (₹)', 'pyramid-2 price', 'p2 price (₹)'],
+      'pyramid2Qty': ['pyramid 2 qty', 'p2 qty', 'p-2 qty', 'pyramid2 qty', 'pyr2 qty', 'p-2\nqty', 'p-2 qty', 'p-2 qty', 'p2 qty'],
+      'pyramid2Date': ['pyramid 2 date', 'p2 date', 'p-2 date', 'pyramid2 date', 'pyr2 date', 'p-2\ndate', 'p-2 date', 'p-2 date', 'p2 date'],
+      'exit1Price': ['exit 1 price', 'e1 price', 'exit1 price', 'sell 1 price', 'exit price', 'exit-1\nprice', 'exit-1 price', 'exit-1 price (₹)', 'e1 price (₹)'],
+      'exit1Qty': ['exit 1 qty', 'e1 qty', 'exit1 qty', 'sell 1 qty', 'exit qty', 'exit-1\nqty', 'exit-1 qty', 'e1 qty'],
       'exit1Date': ['exit 1 date', 'e1 date', 'exit1 date', 'sell 1 date', 'exit date'],
-      'exit2Price': ['exit 2 price', 'e2 price', 'exit2 price', 'sell 2 price', 'exit-2\nprice', 'exit-2 price'],
-      'exit2Qty': ['exit 2 qty', 'e2 qty', 'exit2 qty', 'sell 2 qty', 'exit-2\nqty'],
+      'exit2Price': ['exit 2 price', 'e2 price', 'exit2 price', 'sell 2 price', 'exit-2\nprice', 'exit-2 price', 'exit-2 price (₹)', 'e2 price (₹)'],
+      'exit2Qty': ['exit 2 qty', 'e2 qty', 'exit2 qty', 'sell 2 qty', 'exit-2\nqty', 'exit-2 qty', 'e2 qty'],
       'exit2Date': ['exit 2 date', 'e2 date', 'exit2 date', 'sell 2 date'],
-      'exit3Price': ['exit 3 price', 'e3 price', 'exit3 price', 'sell 3 price', 'exit-3\nprice', 'exit-3 price'],
-      'exit3Qty': ['exit 3 qty', 'e3 qty', 'exit3 qty', 'sell 3 qty', 'exit-3\nqty'],
+      'exit3Price': ['exit 3 price', 'e3 price', 'exit3 price', 'sell 3 price', 'exit-3\nprice', 'exit-3 price', 'exit-3 price (₹)', 'exit-3 price', 'e3 price (₹)'],
+      'exit3Qty': ['exit 3 qty', 'e3 qty', 'exit3 qty', 'sell 3 qty', 'exit-3\nqty', 'exit-3 qty', 'exit-3 qty', 'e3 qty'],
       'exit3Date': ['exit 3 date', 'e3 date', 'exit3 date', 'sell 3 date'],
+      'openQty': ['open qty', 'open quantity', 'open qty', 'remaining qty', 'balance qty'],
+      'exitedQty': ['exited qty', 'exited quantity', 'exited qty', 'sold qty', 'closed qty'],
+      'avgExitPrice': ['avg exit', 'average exit', 'avg. exit', 'avg exit price', 'average exit price', 'avg. exit price'],
+      'stockMove': ['stock move', 'stock move %', 'stock move (%)', 'price move', 'move %'],
+      'openHeat': ['open heat', 'open heat %', 'open heat (%)', 'heat', 'heat %'],
+      'rewardRisk': ['r:r', 'reward:risk', 'reward: risk', 'rr', 'risk reward', 'reward risk', 'reward:risk', 'reward : risk'],
+      'holdingDays': ['holding days', 'days', 'hold days', 'duration', 'holding period'],
+      'positionStatus': ['status', 'position status', 'trade status', 'pos status'],
+      'realisedAmount': ['realised amount', 'realized amount', 'realised amt', 'realized amt', 'trade amount'],
+      'plRs': ['p/l', 'p/l rs', 'p/l (₹)', 'realized p/l', 'realised p/l', 'realized p/l (₹)', 'profit loss', 'pnl'],
+      'pfImpact': ['pf impact', 'pf impact %', 'pf impact (%)', 'portfolio impact', 'portfolio impact %'],
+      'cummPf': ['cumm pf', 'cumm. pf', 'cumm pf %', 'cumm. pf (%)', 'cumulative pf', 'cumulative portfolio'],
       'planFollowed': ['plan followed', 'plan followed?', 'followed plan', 'plan \nfollowed?'],
-      'exitTrigger': ['exit trigger', 'trigger', 'exit reason', 'exit trigger'],
-      'proficiencyGrowthAreas': ['growth areas', 'proficiency', 'improvement areas', 'growth areas'],
+      'exitTrigger': ['exit trigger', 'trigger', 'exit reason', 'exit trigger', 'exit cause', 'reason'],
+      'proficiencyGrowthAreas': ['growth areas', 'proficiency', 'improvement areas', 'growth areas', 'areas', 'improvement'],
+      'baseDuration': ['base duration', 'duration', 'time frame', 'holding period'],
       'notes': ['notes', 'comments', 'remarks', 'description', 'memo', 'observation', 'note']
     };
 
@@ -679,9 +737,9 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       // Contains match
       if (s1.includes(s2) || s2.includes(s1)) return 80;
 
-      // Remove common separators, newlines, and special characters for better matching
-      const clean1 = s1.replace(/[-_\s\n\r\/\(\)\.\?:]/g, '');
-      const clean2 = s2.replace(/[-_\s\n\r\/\(\)\.\?:]/g, '');
+      // Remove common separators, newlines, special characters, and currency symbols for better matching
+      const clean1 = s1.replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
+      const clean2 = s2.replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
       if (clean1 === clean2) return 95;
       if (clean1.includes(clean2) || clean2.includes(clean1)) return 85;
 
@@ -691,30 +749,77 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       if (normalized1 === normalized2) return 90;
       if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return 75;
 
-      // Word-based matching with better tokenization
-      const words1 = s1.split(/[-_\s\n\r\/\(\)\.\?:]+/).filter(w => w.length > 0);
-      const words2 = s2.split(/[-_\s\n\r\/\(\)\.\?:]+/).filter(w => w.length > 0);
-      const commonWords = words1.filter(word => words2.includes(word));
+      // Enhanced word-based matching with better tokenization and abbreviation handling
+      const words1 = s1.split(/[-_\s\n\r\/\(\)\.\?:₹%]+/).filter(w => w.length > 0);
+      const words2 = s2.split(/[-_\s\n\r\/\(\)\.\?:₹%]+/).filter(w => w.length > 0);
+
+      // Handle common abbreviations and variations
+      const normalizeWord = (word: string): string => {
+        const abbrevMap: { [key: string]: string } = {
+          'qty': 'quantity',
+          'avg': 'average',
+          'pos': 'position',
+          'pf': 'portfolio',
+          'cumm': 'cumulative',
+          'realised': 'realized',
+          'amt': 'amount',
+          'rs': 'rupees',
+          'sl': 'stoploss',
+          'tsl': 'trailingstop',
+          'cmp': 'currentprice',
+          'pl': 'profitloss',
+          'pnl': 'profitloss'
+        };
+        return abbrevMap[word] || word;
+      };
+
+      const normalizedWords1 = words1.map(normalizeWord);
+      const normalizedWords2 = words2.map(normalizeWord);
+
+      const commonWords = normalizedWords1.filter(word => normalizedWords2.includes(word));
       if (commonWords.length > 0) {
-        return (commonWords.length / Math.max(words1.length, words2.length)) * 60;
+        const score = (commonWords.length / Math.max(normalizedWords1.length, normalizedWords2.length)) * 70;
+        return Math.min(score, 85); // Cap at 85 to ensure exact matches get higher scores
+      }
+
+      // Partial word matching for compound words
+      let partialMatches = 0;
+      for (const word1 of normalizedWords1) {
+        for (const word2 of normalizedWords2) {
+          if (word1.length > 2 && word2.length > 2) {
+            if (word1.includes(word2) || word2.includes(word1)) {
+              partialMatches++;
+              break;
+            }
+          }
+        }
+      }
+
+      if (partialMatches > 0) {
+        return (partialMatches / Math.max(normalizedWords1.length, normalizedWords2.length)) * 50;
       }
 
       return 0;
     };
 
-    // Special context-aware mapping for ambiguous "Date" columns
-    const mapDateColumnsWithContext = () => {
+    // Special context-aware mapping for ambiguous "Date" columns and duplicate "SL" columns
+    const mapAmbiguousColumnsWithContext = () => {
       const dateColumns: Array<{header: string, index: number}> = [];
+      const slColumns: Array<{header: string, index: number}> = [];
 
-      // Find all "Date" columns with their positions
+      // Find all "Date" and "SL" columns with their positions
       headers.forEach((header, index) => {
-        if (header.toLowerCase().trim() === 'date') {
+        const cleanHeader = header.toLowerCase().trim();
+        if (cleanHeader === 'date') {
           dateColumns.push({ header, index });
+        }
+        if (cleanHeader === 'sl') {
+          slColumns.push({ header, index });
         }
       });
 
+      // Handle multiple "Date" columns
       if (dateColumns.length > 1) {
-        // Multiple "Date" columns - use context and position to map them
         dateColumns.forEach((dateCol, arrayIndex) => {
           const colIndex = dateCol.index;
 
@@ -730,7 +835,7 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
               confidence['date'] = 95;
             }
           } else {
-            // Subsequent "Date" columns - check context
+            // Subsequent "Date" columns - check context with enhanced patterns
             if (prev1Col.includes('qty') && (prev2Col.includes('exit-1') || prev2Col.includes('e1') || prev1Col.includes('exit'))) {
               if (!mapping['exit1Date']) {
                 mapping['exit1Date'] = dateCol.header;
@@ -757,18 +862,125 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                 confidence['pyramid2Date'] = 90;
               }
             }
+            // Enhanced context patterns for your specific CSV format
+            else if (prev1Col.includes('e1') && prev1Col.includes('qty')) {
+              if (!mapping['exit1Date']) {
+                mapping['exit1Date'] = dateCol.header;
+                confidence['exit1Date'] = 85;
+              }
+            } else if (prev1Col.includes('e2') && prev1Col.includes('qty')) {
+              if (!mapping['exit2Date']) {
+                mapping['exit2Date'] = dateCol.header;
+                confidence['exit2Date'] = 85;
+              }
+            } else if (prev1Col.includes('e3') && prev1Col.includes('qty')) {
+              if (!mapping['exit3Date']) {
+                mapping['exit3Date'] = dateCol.header;
+                confidence['exit3Date'] = 85;
+              }
+            }
+            // Check for exact E1, E2, E3 date patterns
+            else if (colIndex > 0 && headers[colIndex - 1]?.toLowerCase().includes('e1')) {
+              if (!mapping['exit1Date']) {
+                mapping['exit1Date'] = dateCol.header;
+                confidence['exit1Date'] = 90;
+              }
+            } else if (colIndex > 0 && headers[colIndex - 1]?.toLowerCase().includes('e2')) {
+              if (!mapping['exit2Date']) {
+                mapping['exit2Date'] = dateCol.header;
+                confidence['exit2Date'] = 90;
+              }
+            } else if (colIndex > 0 && headers[colIndex - 1]?.toLowerCase().includes('e3')) {
+              if (!mapping['exit3Date']) {
+                mapping['exit3Date'] = dateCol.header;
+                confidence['exit3Date'] = 90;
+              }
+            }
+            // Fallback: map remaining Date columns to exit dates in order
+            else if (arrayIndex === 1 && !mapping['exit1Date']) {
+              mapping['exit1Date'] = dateCol.header;
+              confidence['exit1Date'] = 75;
+            } else if (arrayIndex === 2 && !mapping['exit2Date']) {
+              mapping['exit2Date'] = dateCol.header;
+              confidence['exit2Date'] = 75;
+            } else if (arrayIndex === 3 && !mapping['exit3Date']) {
+              mapping['exit3Date'] = dateCol.header;
+              confidence['exit3Date'] = 75;
+            }
+          }
+        });
+      }
+
+      // Handle multiple "SL" columns - first one is stop loss, second might be something else
+      if (slColumns.length > 1) {
+        slColumns.forEach((slCol, arrayIndex) => {
+          const colIndex = slCol.index;
+
+          // Look at surrounding columns for context
+          const prev1Col = colIndex > 0 ? headers[colIndex - 1]?.toLowerCase().trim() : '';
+          const next1Col = colIndex < headers.length - 1 ? headers[colIndex + 1]?.toLowerCase().trim() : '';
+
+          if (arrayIndex === 0) {
+            // First SL column is likely the actual stop loss
+            if (!mapping['sl']) {
+              mapping['sl'] = slCol.header;
+              confidence['sl'] = 95;
+            }
+          } else {
+            // Subsequent SL columns might be something else - skip or handle differently
+            // Don't map subsequent SL columns to avoid confusion
+            console.log('Skipping duplicate SL column at index:', colIndex, 'with context:', prev1Col, next1Col);
           }
         });
       }
     };
 
-    // Apply context-aware date mapping first
-    mapDateColumnsWithContext();
+    // Apply context-aware mapping for ambiguous columns first
+    mapAmbiguousColumnsWithContext();
 
-    // For each field, find the best matching header (skip date if already mapped)
-    Object.entries(similarityMap).forEach(([field, keywords]) => {
+    // Direct mapping for specific known columns that might not be caught by similarity
+    const directMappings: { [key: string]: string } = {
+      'E1 Date': 'exit1Date',
+      'E2 Date': 'exit2Date',
+      'E3 Date': 'exit3Date',
+      'SL %': 'slPercent'
+    };
+
+    console.log('🔍 Checking direct mappings...');
+    Object.entries(directMappings).forEach(([columnName, fieldName]) => {
+      const columnIndex = headers.findIndex(h => h === columnName);
+      console.log(`Looking for column "${columnName}" for field "${fieldName}": found at index ${columnIndex}`);
+
+      if (columnIndex !== -1) {
+        const alreadyMappedField = mapping[fieldName];
+        const columnAlreadyUsed = Object.values(mapping).includes(columnName);
+
+        console.log(`  - Field "${fieldName}" already mapped: ${alreadyMappedField ? 'YES to ' + alreadyMappedField : 'NO'}`);
+        console.log(`  - Column "${columnName}" already used: ${columnAlreadyUsed ? 'YES' : 'NO'}`);
+
+        if (!mapping[fieldName] && !Object.values(mapping).includes(columnName)) {
+          mapping[fieldName] = columnName;
+          confidence[fieldName] = 100;
+          console.log(`🎯 Direct mapping: ${fieldName} → "${columnName}" (100%)`);
+        } else {
+          console.log(`❌ Skipping direct mapping for ${fieldName} → "${columnName}"`);
+        }
+      } else {
+        console.log(`❌ Column "${columnName}" not found in headers`);
+      }
+    });
+
+    // Priority mapping: Map exact matches first, then similar matches
+    const priorityFields = ['cmp', 'rewardRisk', 'setup', 'name']; // Fields that need exact matching first
+    const regularFields = Object.keys(similarityMap).filter(field => !priorityFields.includes(field));
+
+    // Process priority fields first with strict matching
+    [...priorityFields, ...regularFields].forEach(field => {
       // Skip if already mapped by context-aware function
       if (mapping[field]) return;
+
+      const keywords = similarityMap[field];
+      if (!keywords) return;
 
       let bestMatch = '';
       let bestScore = 0;
@@ -776,13 +988,26 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       headers.forEach((header, headerIndex) => {
         keywords.forEach(keyword => {
           const score = calculateSimilarity(header, keyword);
-          if (score > bestScore && score >= 80) { // Increased threshold to 80% for automatic mapping
-            // Additional validation: check if this column actually has data
-            if (hasValidData(headerIndex)) {
+
+          // Use different thresholds for different field types
+          let threshold = 60; // Lower default threshold
+          if (['setup', 'name', 'exitTrigger', 'proficiencyGrowthAreas', 'notes', 'baseDuration'].includes(field)) {
+            threshold = 50; // Very low threshold for text fields
+          } else if (['cmp', 'rewardRisk'].includes(field)) {
+            threshold = 85; // Moderate threshold for fields that often get confused
+          }
+
+          if (score > bestScore && score >= threshold) {
+            // Additional validation: check if this column actually has data and matches expected data type
+            const hasData = hasValidData(headerIndex);
+            const validDataType = validateFieldDataType(field, headerIndex);
+
+            if (hasData && validDataType) {
               bestScore = score;
               bestMatch = header;
             } else {
-              }
+              console.log(`❌ Skipping mapping for ${field} to ${header} (score: ${score}%) - hasData: ${hasData}, validDataType: ${validDataType}`);
+            }
           }
         });
       });
@@ -790,7 +1015,11 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
       if (bestMatch && !Object.values(mapping).includes(bestMatch)) {
         mapping[field] = bestMatch;
         confidence[field] = bestScore;
-        console.log('Mapped field:', field, 'to column:', bestMatch, 'with confidence:', bestScore);
+        console.log('✅ Mapped field:', field, 'to column:', bestMatch, 'with confidence:', bestScore);
+      } else if (bestMatch && Object.values(mapping).includes(bestMatch)) {
+        console.log('⚠️ Column already mapped:', bestMatch, 'skipping field:', field);
+      } else {
+        console.log('❌ No suitable mapping found for field:', field);
       }
     });
 
@@ -876,7 +1105,10 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
           return value;
         },
         dynamicTyping: false, // Disable automatic type conversion for better control
-        fastMode: true, // Enable fast mode for better performance
+        fastMode: false, // Disable fast mode to properly handle quoted fields with commas
+        delimiter: ',', // Explicitly set comma as delimiter
+        quoteChar: '"', // Explicitly set quote character
+        escapeChar: '"', // Explicitly set escape character
         error: (error) => {
           setError('CSV parsing failed: ' + error.message);
         }
@@ -1048,16 +1280,26 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
         if (columnIndex !== -1 && row[columnIndex] !== undefined) {
           const value = row[columnIndex];
 
+          // Debug logging for first few rows
+          if (validTradeCount < 3) {
+            console.log(`📊 Row ${validTradeCount + 1}: Mapping ${field} ← "${column}" (index ${columnIndex}) = "${value}"`);
+          }
+
           // Type conversion based on field - ONLY for user input fields
-          if (['entry', 'sl', 'tsl', 'pyramid1Price', 'pyramid2Price',
-               'exit1Price', 'exit2Price', 'exit3Price'].includes(field)) {
+          if (['entry', 'avgEntry', 'sl', 'tsl', 'cmp', 'pyramid1Price', 'pyramid2Price',
+               'exit1Price', 'exit2Price', 'exit3Price', 'avgExitPrice', 'realisedAmount', 'plRs'].includes(field)) {
             // Enhanced number parsing for cross-platform compatibility
             const parsedNumber = parseFlexibleNumber(value);
             (trade as any)[field] = parsedNumber;
-          } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty'].includes(field)) {
+          } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty',
+                     'openQty', 'exitedQty', 'holdingDays'].includes(field)) {
             // Enhanced quantity parsing for cross-platform compatibility
             const parsedQuantity = parseFlexibleNumber(value);
             (trade as any)[field] = Math.round(parsedQuantity); // Quantities should be whole numbers
+          } else if (['slPercent', 'allocation', 'stockMove', 'openHeat', 'pfImpact', 'cummPf', 'positionSize'].includes(field)) {
+            // Enhanced percentage/decimal parsing
+            const parsedPercent = parseFlexibleNumber(value);
+            (trade as any)[field] = parsedPercent;
           } else if (field === 'buySell') {
             // Handle Buy/Sell field - normalize common variations
             const buySellValue = String(value || '').toLowerCase().trim();
@@ -1076,6 +1318,22 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
             // Enhanced date parsing with multiple format support
             const parsedDate = parseDate(value);
             (trade as any)[field] = parsedDate || new Date().toISOString().split('T')[0];
+          } else if (field === 'positionStatus') {
+            // Handle status field - normalize common variations
+            const statusValue = String(value || '').toLowerCase().trim();
+            if (statusValue === 'open' || statusValue === 'o') {
+              (trade as any)[field] = 'Open';
+            } else if (statusValue === 'closed' || statusValue === 'c') {
+              (trade as any)[field] = 'Closed';
+            } else if (statusValue === 'partial' || statusValue === 'p') {
+              (trade as any)[field] = 'Partial';
+            } else {
+              (trade as any)[field] = statusValue || 'Open'; // Default to Open
+            }
+          } else if (field === 'rewardRisk') {
+            // Handle R:R field - parse as decimal
+            const rrValue = parseFlexibleNumber(value);
+            (trade as any)[field] = rrValue;
           } else if (field === 'setup') {
             // Special handling for setup field - reject numeric values
             const setupValue = String(value || '').trim();
@@ -1085,6 +1343,9 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
             } else {
               (trade as any)[field] = ''; // Leave empty if it's a numeric value
             }
+          } else if (['name', 'exitTrigger', 'proficiencyGrowthAreas', 'notes', 'baseDuration'].includes(field)) {
+            // Handle text fields - store as string, trim whitespace
+            (trade as any)[field] = String(value || '').trim();
           } else {
             (trade as any)[field] = String(value || '');
           }
@@ -1190,15 +1451,20 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
           const value = row[columnIndex];
 
           // Type conversion based on field - ONLY for user input fields
-          if (['entry', 'sl', 'tsl', 'pyramid1Price', 'pyramid2Price',
-               'exit1Price', 'exit2Price', 'exit3Price'].includes(field)) {
+          if (['entry', 'avgEntry', 'sl', 'tsl', 'cmp', 'pyramid1Price', 'pyramid2Price',
+               'exit1Price', 'exit2Price', 'exit3Price', 'avgExitPrice', 'realisedAmount', 'plRs'].includes(field)) {
             // Enhanced number parsing for cross-platform compatibility
             const parsedNumber = parseFlexibleNumber(value);
             (trade as any)[field] = parsedNumber;
-          } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty'].includes(field)) {
+          } else if (['initialQty', 'pyramid1Qty', 'pyramid2Qty', 'exit1Qty', 'exit2Qty', 'exit3Qty',
+                     'openQty', 'exitedQty', 'holdingDays'].includes(field)) {
             // Enhanced quantity parsing for cross-platform compatibility
             const parsedQuantity = parseFlexibleNumber(value);
             (trade as any)[field] = Math.round(parsedQuantity); // Quantities should be whole numbers
+          } else if (['slPercent', 'allocation', 'stockMove', 'openHeat', 'pfImpact', 'cummPf', 'positionSize'].includes(field)) {
+            // Enhanced percentage/decimal parsing
+            const parsedPercent = parseFlexibleNumber(value);
+            (trade as any)[field] = parsedPercent;
           } else if (field === 'buySell') {
             // Handle Buy/Sell field - normalize common variations
             const buySellValue = String(value || '').toLowerCase().trim();
@@ -1220,6 +1486,22 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
               dateParsingErrors.push('Row ' + (validTradeCount + skippedBlankTrades + 1) + ': Invalid date "' + value + '" in ' + field);
             }
             (trade as any)[field] = parsedDate || new Date().toISOString().split('T')[0];
+          } else if (field === 'positionStatus') {
+            // Handle status field - normalize common variations
+            const statusValue = String(value || '').toLowerCase().trim();
+            if (statusValue === 'open' || statusValue === 'o') {
+              (trade as any)[field] = 'Open';
+            } else if (statusValue === 'closed' || statusValue === 'c') {
+              (trade as any)[field] = 'Closed';
+            } else if (statusValue === 'partial' || statusValue === 'p') {
+              (trade as any)[field] = 'Partial';
+            } else {
+              (trade as any)[field] = statusValue || 'Open'; // Default to Open
+            }
+          } else if (field === 'rewardRisk') {
+            // Handle R:R field - parse as decimal
+            const rrValue = parseFlexibleNumber(value);
+            (trade as any)[field] = rrValue;
           } else if (field === 'setup') {
             // Special handling for setup field - reject numeric values
             const setupValue = String(value || '').trim();
@@ -1229,6 +1511,9 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
             } else {
               (trade as any)[field] = ''; // Leave empty if it's a numeric value
             }
+          } else if (['name', 'exitTrigger', 'proficiencyGrowthAreas', 'notes', 'baseDuration'].includes(field)) {
+            // Handle text fields - store as string, trim whitespace
+            (trade as any)[field] = String(value || '').trim();
           } else {
             (trade as any)[field] = String(value || '');
           }
@@ -1305,24 +1590,231 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
     setSelectedDateFormat('auto');
   }, []);
 
-  // Test function to verify mapping with your exact CSV format
-  const testMappingWithUserFormat = useCallback(() => {
-    const userHeaders = [
-      "Trade\nNo.", "Date", "Name", "Entry", "Avg\nEntry", "SL", "TSL", "Buy/\nSell", "CMP", "Setup",
-      "Base\n Duration", "Initial\nQTY", "Pyramid-1\nPrice", "P-1\nQTY", "P-1\nDate", "Pyramid-2\nPrice",
-      "P-2\nQTY", "P-2\nDate", "Position\nSize", "Allocation", "SL", "Exit-1\nPrice", "Exit-1\nQty",
-      "Date", "Exit-2\nPrice", "Exit-2\nQty", "Date", "Exit-3\nPrice", "Exit-3\nQty", "Date",
-      "Open \nQTY", "Exited\nQty", "Avg.\nExit\nPrice", "Stock\nMove", "Open Heat", "Reward:\nRisk",
-      "Holding\n Days", "Position\nStatus", "Realised\nAmount", "P/L\nRs", "PF\nImpact", "Cumm\npf ",
-      "Plan \nFollowed?", "Exit Trigger", "Proficiency", "Growth Areas", "Note"
+  // Test function to verify mapping with your exact CSV formats
+  const testMappingWithUserFormats = useCallback(() => {
+    console.log('🧪 Testing CSV mapping with user formats...');
+
+    // First, show the actual CSV headers if we have real data
+    if (parsedData && parsedData.headers) {
+      console.log('📋 Actual CSV Headers:');
+      parsedData.headers.forEach((header, index) => {
+        console.log(`  ${index}: "${header}"`);
+      });
+      console.log('');
+    }
+
+    // Test with your second CSV format (the problematic one)
+    const userHeaders2 = [
+      "Trade No.", "Date", "Name", "Entry", "Avg Entry", "SL", "TSL", "Buy/ Sell", "CMP", "Setup",
+      "Base Duration", "Initial QTY", "Pyramid-1 Price", "P-1 QTY", "P-1 Date", "Pyramid-2 Price",
+      "P-2 QTY", "P-2 Date", "Position Size", "Allocation", "SL", "Exit-1 Price", "Exit-1 Qty",
+      "Date", "Exit-2 Price", "Exit-2 Qty", "Date", "Exit-3 Price", "Exit-3 Qty", "Date",
+      "Open QTY", "Exited Qty", "Avg. Exit Price", "Stock Move", "Open Heat", "Reward: Risk",
+      "Holding Days", "Position Status", "Realised Amount", "P/L Rs", "PF Impact", "Cumm pf",
+      "Plan Followed?", "Exit Trigger", "Proficiency", "Growth Areas", "Note"
     ];
 
-    const smartMapping = generateSmartMapping(userHeaders);
+    // Mock parsedData for testing
+    const mockParsedData = {
+      headers: userHeaders2,
+      rows: [
+        ['1', '2024-07-24', 'ELECTCAST', '203', '207', '198.95', '', 'Buy', '', '', '', '54', '210.95', '54', '2024-07-26', '', '', '', '22353', '17.19', '', '214.36', '54', '2024-07-29', '211.75', '54', '2024-07-29', '', '', '', '108', '', '213.06', '2.94', '0', '1.47', '5', 'Closed', '23010', '657', '0.51', '0.51', '', '', '', '', '']
+      ],
+      fileName: 'test.csv'
+    };
+
+    // Create a test version of generateSmartMapping that doesn't depend on parsedData state
+    const testGenerateSmartMapping = (testHeaders: string[]) => {
+      const mapping: ColumnMapping = {};
+      const confidence: MappingConfidence = {};
+      const headers = testHeaders;
+
+      // Mock hasValidData function for testing
+      const hasValidData = (columnIndex: number): boolean => {
+        return columnIndex < headers.length; // Simple mock - assume all columns have data
+      };
+
+      // Mock validateFieldDataType function for testing - more realistic
+      const validateFieldDataType = (field: string, columnIndex: number): boolean => {
+        const columnHeader = headers[columnIndex]?.toLowerCase() || '';
+
+        // Prevent CMP from mapping to R:R columns
+        if (field === 'cmp' && (columnHeader.includes('r:r') || columnHeader.includes('reward') || columnHeader.includes('risk'))) {
+          return false;
+        }
+
+        // Prevent rewardRisk from mapping to CMP columns
+        if (field === 'rewardRisk' && (columnHeader.includes('cmp') || columnHeader.includes('current') || columnHeader.includes('market'))) {
+          return false;
+        }
+
+        return true; // Accept most other mappings for testing
+      };
+
+      // Enhanced similarity mapping - same as the real one
+      const similarityMap: { [key: string]: string[] } = {
+        'tradeNo': ['trade no', 'trade number', 'trade id', 'id', 'sr no', 'serial', 'trade #', '#', 'trade no.'],
+        'date': ['date', 'entry date', 'trade date', 'timestamp', 'entry dt', 'dt'],
+        'name': ['name', 'stock', 'symbol', 'stock name', 'company', 'scrip', 'ticker', 'instrument'],
+        'setup': ['setup', 'strategy', 'pattern', 'setup type', 'trade setup', 'setup name'],
+        'buySell': ['buy/sell', 'buysell', 'side', 'action', 'transaction type', 'buy sell', 'direction', 'buy/ sell'],
+        'entry': ['entry', 'entry price', 'buy price', 'price', 'entry rate', 'buy rate', 'entry (₹)'],
+        'avgEntry': ['avg entry', 'average entry', 'avg. entry', 'avg entry (₹)', 'average entry price', 'avg entry price'],
+        'sl': ['sl', 'stop loss', 'stoploss', 'stop', 'sl price', 'stop price', 'sl (₹)'],
+        'tsl': ['tsl', 'trailing sl', 'trailing stop', 'trail sl', 'trailing stop loss', 'tsl (₹)'],
+        'cmp': ['cmp', 'current price', 'market price', 'ltp', 'last traded price', 'cmp (₹)'],
+        'initialQty': ['qty', 'quantity', 'initial qty', 'shares', 'units', 'volume', 'size', 'initial qty', 'base qty', 'initial qty'],
+        'positionSize': ['position size', 'pos size', 'pos. size', 'position value', 'trade size'],
+        'allocation': ['allocation', 'allocation %', 'allocation (%)', 'alloc', 'alloc %'],
+        'slPercent': ['sl %', 'sl percent', 'stop loss %', 'stop loss percent', 'sl percentage'],
+        'pyramid1Price': ['pyramid 1 price', 'p1 price', 'p-1 price', 'pyramid1 price', 'pyr1 price', 'pyramid-1 price', 'pyramid-1 price (₹)'],
+        'pyramid1Qty': ['pyramid 1 qty', 'p1 qty', 'p-1 qty', 'pyramid1 qty', 'pyr1 qty', 'p-1\nqty', 'p-1 qty'],
+        'pyramid1Date': ['pyramid 1 date', 'p1 date', 'p-1 date', 'pyramid1 date', 'pyr1 date', 'p-1\ndate', 'p-1 date'],
+        'pyramid2Price': ['pyramid 2 price', 'p2 price', 'p-2 price', 'pyramid2 price', 'pyr2 price', 'pyramid-2\nprice', 'pyramid-2 price', 'pyramid-2 price (₹)'],
+        'pyramid2Qty': ['pyramid 2 qty', 'p2 qty', 'p-2 qty', 'pyramid2 qty', 'pyr2 qty', 'p-2\nqty', 'p-2 qty'],
+        'pyramid2Date': ['pyramid 2 date', 'p2 date', 'p-2 date', 'pyramid2 date', 'pyr2 date', 'p-2\ndate', 'p-2 date'],
+        'exit1Price': ['exit 1 price', 'e1 price', 'exit1 price', 'sell 1 price', 'exit price', 'exit-1\nprice', 'exit-1 price', 'exit-1 price (₹)'],
+        'exit1Qty': ['exit 1 qty', 'e1 qty', 'exit1 qty', 'sell 1 qty', 'exit qty', 'exit-1\nqty', 'exit-1 qty'],
+        'exit1Date': ['exit 1 date', 'e1 date', 'exit1 date', 'sell 1 date', 'exit date', 'e1 date'],
+        'exit2Price': ['exit 2 price', 'e2 price', 'exit2 price', 'sell 2 price', 'exit-2\nprice', 'exit-2 price', 'exit-2 price (₹)'],
+        'exit2Qty': ['exit 2 qty', 'e2 qty', 'exit2 qty', 'sell 2 qty', 'exit-2\nqty', 'exit-2 qty'],
+        'exit2Date': ['exit 2 date', 'e2 date', 'exit2 date', 'sell 2 date', 'e2 date'],
+        'exit3Price': ['exit 3 price', 'e3 price', 'exit3 price', 'sell 3 price', 'exit-3\nprice', 'exit-3 price', 'exit-3 price (₹)'],
+        'exit3Qty': ['exit 3 qty', 'e3 qty', 'exit3 qty', 'sell 3 qty', 'exit-3\nqty', 'exit-3 qty'],
+        'exit3Date': ['exit 3 date', 'e3 date', 'exit3 date', 'sell 3 date', 'e3 date'],
+        'openQty': ['open qty', 'open quantity', 'open qty', 'remaining qty', 'balance qty'],
+        'exitedQty': ['exited qty', 'exited quantity', 'exited qty', 'sold qty', 'closed qty'],
+        'avgExitPrice': ['avg exit', 'average exit', 'avg. exit', 'avg exit price', 'average exit price', 'avg. exit price'],
+        'stockMove': ['stock move', 'stock move %', 'stock move (%)', 'price move', 'move %'],
+        'openHeat': ['open heat', 'open heat %', 'open heat (%)', 'heat', 'heat %'],
+        'rewardRisk': ['r:r', 'reward:risk', 'reward: risk', 'rr', 'risk reward', 'reward risk'],
+        'holdingDays': ['holding days', 'days', 'hold days', 'duration', 'holding period'],
+        'positionStatus': ['status', 'position status', 'trade status', 'pos status'],
+        'realisedAmount': ['realised amount', 'realized amount', 'realised amt', 'realized amt', 'trade amount'],
+        'plRs': ['p/l', 'p/l rs', 'p/l (₹)', 'realized p/l', 'realised p/l', 'realized p/l (₹)', 'profit loss', 'pnl'],
+        'pfImpact': ['pf impact', 'pf impact %', 'pf impact (%)', 'portfolio impact', 'portfolio impact %'],
+        'cummPf': ['cumm pf', 'cumm. pf', 'cumm pf %', 'cumm. pf (%)', 'cumulative pf', 'cumulative portfolio'],
+        'planFollowed': ['plan followed', 'plan followed?', 'followed plan', 'plan \nfollowed?'],
+        'exitTrigger': ['exit trigger', 'trigger', 'exit reason', 'exit trigger'],
+        'proficiencyGrowthAreas': ['growth areas', 'proficiency', 'improvement areas', 'growth areas'],
+        'baseDuration': ['base duration', 'duration', 'time frame', 'holding period'],
+        'notes': ['notes', 'comments', 'remarks', 'description', 'memo', 'observation', 'note']
+      };
+
+      // Use the same similarity calculation function
+      const calculateSimilarity = (str1: string, str2: string): number => {
+        const s1 = str1.toLowerCase().trim();
+        const s2 = str2.toLowerCase().trim();
+
+        if (s1 === s2) return 100;
+        if (s1.includes(s2) || s2.includes(s1)) return 80;
+
+        const clean1 = s1.replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
+        const clean2 = s2.replace(/[-_\s\n\r\/\(\)\.\?:₹%]/g, '');
+        if (clean1 === clean2) return 95;
+        if (clean1.includes(clean2) || clean2.includes(clean1)) return 85;
+
+        const normalized1 = s1.replace(/\s+/g, ' ').replace(/\n/g, ' ');
+        const normalized2 = s2.replace(/\s+/g, ' ').replace(/\n/g, ' ');
+        if (normalized1 === normalized2) return 90;
+        if (normalized1.includes(normalized2) || normalized2.includes(normalized1)) return 75;
+
+        const words1 = s1.split(/[-_\s\n\r\/\(\)\.\?:₹%]+/).filter(w => w.length > 0);
+        const words2 = s2.split(/[-_\s\n\r\/\(\)\.\?:₹%]+/).filter(w => w.length > 0);
+
+        const normalizeWord = (word: string): string => {
+          const abbrevMap: { [key: string]: string } = {
+            'qty': 'quantity', 'avg': 'average', 'pos': 'position', 'pf': 'portfolio',
+            'cumm': 'cumulative', 'realised': 'realized', 'amt': 'amount', 'rs': 'rupees',
+            'sl': 'stoploss', 'tsl': 'trailingstop', 'cmp': 'currentprice', 'pl': 'profitloss', 'pnl': 'profitloss'
+          };
+          return abbrevMap[word] || word;
+        };
+
+        const normalizedWords1 = words1.map(normalizeWord);
+        const normalizedWords2 = words2.map(normalizeWord);
+
+        const commonWords = normalizedWords1.filter(word => normalizedWords2.includes(word));
+        if (commonWords.length > 0) {
+          const score = (commonWords.length / Math.max(normalizedWords1.length, normalizedWords2.length)) * 70;
+          return Math.min(score, 85);
+        }
+
+        let partialMatches = 0;
+        for (const word1 of normalizedWords1) {
+          for (const word2 of normalizedWords2) {
+            if (word1.length > 2 && word2.length > 2) {
+              if (word1.includes(word2) || word2.includes(word1)) {
+                partialMatches++;
+                break;
+              }
+            }
+          }
+        }
+
+        if (partialMatches > 0) {
+          return (partialMatches / Math.max(normalizedWords1.length, normalizedWords2.length)) * 50;
+        }
+
+        return 0;
+      };
+
+      // Apply mapping logic
+      Object.entries(similarityMap).forEach(([field, keywords]) => {
+        let bestMatch = '';
+        let bestScore = 0;
+
+        headers.forEach((header, headerIndex) => {
+          keywords.forEach(keyword => {
+            const score = calculateSimilarity(header, keyword);
+            if (score > bestScore && score >= 80) {
+              if (hasValidData(headerIndex) && validateFieldDataType(field, headerIndex)) {
+                bestScore = score;
+                bestMatch = header;
+              }
+            }
+          });
+        });
+
+        if (bestMatch && !Object.values(mapping).includes(bestMatch)) {
+          mapping[field] = bestMatch;
+          confidence[field] = bestScore;
+        }
+      });
+
+      return { mapping, confidence };
+    };
+
+    const smartMapping = testGenerateSmartMapping(userHeaders2);
+
+    console.log('📊 Mapping Results for Format 2:');
     console.log('Total mappings:', Object.keys(smartMapping.mapping).length);
-    console.log('High confidence mappings:', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf > 90).length);
-    console.log('Medium confidence mappings:', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf >= 70 && conf <= 90).length);
+    console.log('High confidence mappings (>90%):', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf > 90).length);
+    console.log('Medium confidence mappings (70-90%):', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf >= 70 && conf <= 90).length);
+    console.log('Low confidence mappings (<70%):', Object.entries(smartMapping.confidence).filter(([_, conf]) => conf < 70).length);
+
+    console.log('📋 Detailed Mappings:');
+    Object.entries(smartMapping.mapping).forEach(([field, column]) => {
+      const conf = smartMapping.confidence[field] || 0;
+      console.log(`  ${field} → "${column}" (${conf}%)`);
+    });
+
+    console.log('❌ Unmapped Fields:');
+    const allExpectedFields = [
+      'tradeNo', 'date', 'name', 'setup', 'buySell', 'entry', 'avgEntry', 'sl', 'tsl', 'cmp',
+      'initialQty', 'positionSize', 'allocation', 'slPercent', 'pyramid1Price', 'pyramid1Qty', 'pyramid1Date',
+      'pyramid2Price', 'pyramid2Qty', 'pyramid2Date', 'exit1Price', 'exit1Qty', 'exit1Date',
+      'exit2Price', 'exit2Qty', 'exit2Date', 'exit3Price', 'exit3Qty', 'exit3Date',
+      'openQty', 'exitedQty', 'avgExitPrice', 'stockMove', 'openHeat', 'rewardRisk', 'holdingDays',
+      'positionStatus', 'realisedAmount', 'plRs', 'pfImpact', 'cummPf', 'planFollowed',
+      'exitTrigger', 'proficiencyGrowthAreas', 'baseDuration', 'notes'
+    ];
+    const mappedFields = Object.keys(smartMapping.mapping);
+    const unmappedFields = allExpectedFields.filter(field => !mappedFields.includes(field));
+    unmappedFields.forEach(field => console.log(`  ${field}`));
+
     return smartMapping;
-  }, [generateSmartMapping]);
+  }, [generateSmartMapping, parsedData]);
 
   // Show under development banner if upload is disabled
   if (isUploadDisabled) {
@@ -1758,21 +2250,34 @@ export const TradeUploadModal: React.FC<TradeUploadModalProps> = ({
                           <p className="text-sm text-foreground-500">
                             Map your file columns to our trade journal fields. We've made smart suggestions based on column names.
                           </p>
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            color="primary"
-                            startContent={<Icon icon="lucide:zap" />}
-                            onPress={() => {
-                              if (parsedData) {
-                                const smartMapping = generateSmartMapping(parsedData.headers);
-                                setColumnMapping(smartMapping.mapping);
-                                setMappingConfidence(smartMapping.confidence);
-                              }
-                            }}
-                          >
-                            Smart Re-map
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              color="primary"
+                              startContent={<Icon icon="lucide:zap" />}
+                              onPress={() => {
+                                if (parsedData) {
+                                  const smartMapping = generateSmartMapping(parsedData.headers);
+                                  setColumnMapping(smartMapping.mapping);
+                                  setMappingConfidence(smartMapping.confidence);
+                                }
+                              }}
+                            >
+                              Smart Re-map
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="flat"
+                              color="secondary"
+                              startContent={<Icon icon="lucide:bug" />}
+                              onPress={() => {
+                                testMappingWithUserFormats();
+                              }}
+                            >
+                              Debug Mapping
+                            </Button>
+                          </div>
                         </div>
 
                         {/* Mapping Summary */}
