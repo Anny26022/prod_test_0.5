@@ -26,7 +26,7 @@ export default defineConfig({
           'icons': ['@iconify/react'],
 
           // Charts and analytics
-          'charts': ['recharts', '@nivo/bar', '@nivo/pie', '@nivo/line'],
+          'charts': ['recharts', '@nivo/bar', '@nivo/pie'],
 
           // Data processing utilities
           'data-utils': ['papaparse', 'xlsx', 'date-fns'],

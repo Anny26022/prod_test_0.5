@@ -623,14 +623,6 @@ export class DatabaseService {
     }
   }
 
-  static async getAllChartImageBlobs(): Promise<ChartImageBlob[]> {
-    try {
-      return await db.chartImageBlobs.toArray();
-    } catch (error) {
-      return [];
-    }
-  }
-
   static async getChartImageBlobsSize(): Promise<number> {
     try {
       const blobs = await db.chartImageBlobs.toArray();
